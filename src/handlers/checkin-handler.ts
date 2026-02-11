@@ -15,7 +15,8 @@ import {
     getTodayCheckinCount,
     getGroupTodayCheckinCount,
     getUserTodayRank,
-    getUserGroupTodayRank
+    getUserGroupTodayRank,
+    getActiveRanking
 } from '../services/checkin-service';
 import { renderCheckinCard, getAvatarUrl } from '../services/puppeteer-service';
 import { getRandomQuote } from '../utils/checkin-messages';
@@ -287,6 +288,41 @@ export async function handleCheckinQuery(
         }
     } catch (error) {
         pluginState.logger.error('处理查询命令失败:', error);
+        await sendReply(ctx, event, '查询失败，请稍后重试~');
+    }
+}
+
+/**
+ * 处理活跃排行查询
+ * 显示全服使用天数最多的忠实用户
+ */
+export async function handleActiveRankingQuery(
+    ctx: NapCatPluginContext,
+    event: OB11Message
+): Promise<void> {
+    try {
+        const ranking = getActiveRanking(10);
+        
+        if (ranking.length === 0) {
+            await sendReply(ctx, event, '还没有人使用过机器人哦~快来成为第一个！');
+            return;
+        }
+        
+        const text = [
+            `🏆 全服活跃排行榜 TOP10`,
+            `📊 按使用天数排行（每天首次打卡计1天）`,
+            ``,
+            ...ranking.map((user, index) => {
+                const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
+                return `${medal} ${user.nickname} - ${user.activeDays}天活跃`;
+            }),
+            ``,
+            `💡 使用天数越多，说明是越忠实的用户哦~`,
+        ];
+        
+        await sendReply(ctx, event, text.join('\n'));
+    } catch (error) {
+        pluginState.logger.error('处理活跃排行查询失败:', error);
         await sendReply(ctx, event, '查询失败，请稍后重试~');
     }
 }

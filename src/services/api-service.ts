@@ -7,7 +7,20 @@ import type {
     NapCatPluginContext,
 } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
-import { getUserCheckinData, getTodayCheckinCount, cleanupOldData, getAllUsersData, getGroupCheckinStats, getAllGroupsStats, getGroupAllUsersData } from './checkin-service';
+import { 
+    getUserCheckinData, 
+    getTodayCheckinCount, 
+    cleanupOldData, 
+    getAllUsersData, 
+    getGroupCheckinStats, 
+    getAllGroupsStats, 
+    getGroupAllUsersData, 
+    getActiveRanking,
+    getGroupUserPoints,
+    updateGroupUserPoints,
+    getGroupUserPointsHistory,
+    resetGroupUserPoints
+} from './checkin-service';
 
 /**
  * 注册 API 路由
@@ -186,7 +199,7 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取全服排行榜 */
+    /** 获取全服排行榜（按积分排序） */
     router.getNoAuth('/checkin/ranking', (_req, res) => {
         try {
             const allUsers = getAllUsersData();
@@ -215,6 +228,27 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
+    /** 获取活跃排行榜（按活跃天数排序，识别忠实用户） */
+    router.getNoAuth('/checkin/active-ranking', (_req, res) => {
+        try {
+            const ranking = getActiveRanking(100);
+            const allUsers = getAllUsersData();
+
+            res.json({
+                code: 0,
+                data: {
+                    totalUsers: allUsers.size,
+                    rankingType: 'active',
+                    rankingDescription: '按使用天数排行，每天首次使用机器人计1天',
+                    ranking: ranking,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('获取活跃排行失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
     /** 获取所有签到统计数据 */
     router.getNoAuth('/checkin/stats', (_req, res) => {
         try {
@@ -224,6 +258,7 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
             const totalUsers = allUsers.size;
             const totalCheckins = Array.from(allUsers.values()).reduce((sum, user) => sum + user.totalCheckinDays, 0);
             const totalPoints = Array.from(allUsers.values()).reduce((sum, user) => sum + user.totalPoints, 0);
+            const totalActiveDays = Array.from(allUsers.values()).reduce((sum, user) => sum + (user.activeDays || 0), 0);
             const todayCheckins = getTodayCheckinCount();
             
             // 获取活跃用户（最近7天签到过）
@@ -238,6 +273,7 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
                     totalUsers,
                     totalCheckins,
                     totalPoints,
+                    totalActiveDays,
                     todayCheckins,
                     activeUsers,
                 },
@@ -338,6 +374,154 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
             });
         } catch (err) {
             ctx.logger.error('获取群内排行失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    // ==================== 群用户积分管理（无鉴权）====================
+
+    /** 获取群用户积分 */
+    router.getNoAuth('/checkin/groups/:groupId/users/:userId/points', (req, res) => {
+        try {
+            const groupId = req.params?.groupId;
+            const userId = req.params?.userId;
+            
+            if (!groupId || !userId) {
+                return res.status(400).json({ code: -1, message: '缺少群ID或用户ID' });
+            }
+
+            const userPoints = getGroupUserPoints(groupId, userId);
+            if (!userPoints) {
+                return res.status(404).json({ code: -1, message: '用户不存在' });
+            }
+
+            res.json({
+                code: 0,
+                data: userPoints,
+            });
+        } catch (err) {
+            ctx.logger.error('获取用户积分失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 修改群用户积分（增加/减少） */
+    router.postNoAuth('/checkin/groups/:groupId/users/:userId/points', (req, res) => {
+        try {
+            const groupId = req.params?.groupId;
+            const userId = req.params?.userId;
+            const body = req.body as { 
+                points: number; 
+                description: string; 
+                type?: 'signin' | 'admin' | 'exchange' | 'other';
+                operatorId?: string;
+            } | undefined;
+            
+            if (!groupId || !userId) {
+                return res.status(400).json({ code: -1, message: '缺少群ID或用户ID' });
+            }
+
+            if (!body || typeof body.points !== 'number') {
+                return res.status(400).json({ code: -1, message: '缺少points参数' });
+            }
+
+            if (!body.description) {
+                return res.status(400).json({ code: -1, message: '缺少description参数' });
+            }
+
+            const result = updateGroupUserPoints(
+                groupId,
+                userId,
+                body.points,
+                body.description,
+                body.type || 'other',
+                body.operatorId
+            );
+
+            if (!result.success) {
+                return res.status(400).json({ code: -1, message: result.error });
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    userId,
+                    groupId,
+                    changedPoints: body.points,
+                    newBalance: result.newBalance,
+                    description: body.description,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('修改用户积分失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 获取群用户积分变更历史 */
+    router.getNoAuth('/checkin/groups/:groupId/users/:userId/points/history', (req, res) => {
+        try {
+            const groupId = req.params?.groupId;
+            const userId = req.params?.userId;
+            const limit = parseInt(req.query?.limit as string) || 50;
+            
+            if (!groupId || !userId) {
+                return res.status(400).json({ code: -1, message: '缺少群ID或用户ID' });
+            }
+
+            const history = getGroupUserPointsHistory(groupId, userId, limit);
+
+            res.json({
+                code: 0,
+                data: {
+                    userId,
+                    groupId,
+                    totalRecords: history.length,
+                    history,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('获取积分历史失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 重置群用户积分 */
+    router.postNoAuth('/checkin/groups/:groupId/users/:userId/points/reset', (req, res) => {
+        try {
+            const groupId = req.params?.groupId;
+            const userId = req.params?.userId;
+            const body = req.body as { 
+                description?: string;
+                operatorId?: string;
+            } | undefined;
+            
+            if (!groupId || !userId) {
+                return res.status(400).json({ code: -1, message: '缺少群ID或用户ID' });
+            }
+
+            const result = resetGroupUserPoints(
+                groupId,
+                userId,
+                body?.description || '积分重置',
+                body?.operatorId
+            );
+
+            if (!result.success) {
+                return res.status(400).json({ code: -1, message: result.error });
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    userId,
+                    groupId,
+                    newBalance: 0,
+                    message: '积分已重置',
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('重置用户积分失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });

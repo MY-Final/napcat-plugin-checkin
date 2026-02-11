@@ -10,7 +10,7 @@
 import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
-import { handleCheckinCommand, handleCheckinAdmin, handleCheckinQuery } from './checkin-handler';
+import { handleCheckinCommand, handleCheckinAdmin, handleCheckinQuery, handleActiveRankingQuery } from './checkin-handler';
 import { getCheckinCommands } from '../types';
 
 // ==================== CD 冷却管理 ====================
@@ -196,7 +196,8 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                     `${commandsText} - 每日签到，获取积分`,
                     `${prefix}我的积分 - 查询个人积分和签到数据`,
                     `${prefix}积分排行 - 查看群内积分排行（群聊）`,
-                    `${prefix}总排行 - 查看全服积分排行`,
+                    `${prefix}总排行 - 查看全服积分排行（按积分）`,
+                    `${prefix}活跃排行 - 查看全服活跃排行（按使用天数，识别忠实用户）`,
                     ``,
                 ];
                 
@@ -292,6 +293,13 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
             case '总排行':
             case '排行榜': {
                 await handleCheckinQuery(ctx, event, 'global');
+                pluginState.incrementProcessed();
+                break;
+            }
+
+            case '活跃排行':
+            case '活跃榜': {
+                await handleActiveRankingQuery(ctx, event);
                 pluginState.incrementProcessed();
                 break;
             }

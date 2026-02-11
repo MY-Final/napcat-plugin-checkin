@@ -123,6 +123,10 @@ export interface UserCheckinData {
     lastCheckinDate: string;
     /** 签到历史记录 */
     checkinHistory: CheckinRecord[];
+    /** 活跃天数（每天首次使用机器人计1天，用于识别忠实用户） */
+    activeDays: number;
+    /** 最后活跃日期 YYYY-MM-DD */
+    lastActiveDate: string;
 }
 
 /**
@@ -143,6 +147,31 @@ export interface GroupUserCheckinData {
     lastCheckinDate: string;
     /** 群内签到历史记录 */
     checkinHistory: CheckinRecord[];
+    /** 积分变更历史（用于兑换奖励等操作记录） */
+    pointsHistory?: PointsChangeRecord[];
+}
+
+/**
+ * 积分变更记录
+ * 用于记录积分的增加/减少操作（如兑换奖励）
+ */
+export interface PointsChangeRecord {
+    /** 变更时间戳 */
+    timestamp: number;
+    /** 变更日期 YYYY-MM-DD */
+    date: string;
+    /** 变更时间 HH:mm:ss */
+    time: string;
+    /** 变更积分（正数为增加，负数为减少） */
+    points: number;
+    /** 变更后积分余额 */
+    balance: number;
+    /** 操作类型：signin=签到, admin=管理员操作, exchange=兑换奖励, other=其他 */
+    type: 'signin' | 'admin' | 'exchange' | 'other';
+    /** 操作说明/备注 */
+    description: string;
+    /** 操作者ID（管理员操作时记录） */
+    operatorId?: string;
 }
 
 /**

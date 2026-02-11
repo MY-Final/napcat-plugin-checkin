@@ -3,21 +3,27 @@ import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import ToastContainer from './components/ToastContainer'
 import StatusPage from './pages/StatusPage'
+import HelpPage from './pages/HelpPage'
 import ConfigPage from './pages/ConfigPage'
 import GroupsPage from './pages/GroupsPage'
+import PointsRankingPage from './pages/PointsRankingPage'
+import ActiveRankingPage from './pages/ActiveRankingPage'
 import CheckinDataPage from './pages/CheckinDataPage'
 import TemplatePage from './pages/TemplatePage'
 import ApiDocsPage from './pages/ApiDocsPage'
 import { useStatus } from './hooks/useStatus'
 import { useTheme } from './hooks/useTheme'
 
-export type PageId = 'status' | 'config' | 'groups' | 'checkin' | 'template' | 'apidocs'
+export type PageId = 'status' | 'help' | 'config' | 'groups' | 'points-ranking' | 'active-ranking' | 'checkin' | 'template' | 'apidocs'
 
 const pageConfig: Record<PageId, { title: string; desc: string }> = {
     status: { title: '仪表盘', desc: '插件运行状态与数据概览' },
+    help: { title: '使用说明', desc: '插件使用指南与扩展开发文档' },
     config: { title: '插件配置', desc: '基础设置与参数配置' },
     groups: { title: '群管理', desc: '管理群的启用与禁用' },
-    checkin: { title: '签到数据', desc: '查看签到排行与统计数据' },
+    'points-ranking': { title: '积分排行', desc: '查看全服积分排行榜' },
+    'active-ranking': { title: '活跃排行', desc: '查看全服活跃排行榜（识别忠实用户）' },
+    checkin: { title: '分群排行', desc: '查看各群的签到排行' },
     template: { title: '模板编辑', desc: '自定义签到卡片 HTML 模板' },
     apidocs: { title: '接口文档', desc: 'API 接口文档与调用参考' }
 }
@@ -42,8 +48,11 @@ function App() {
     const renderPage = () => {
         switch (currentPage) {
             case 'status': return <StatusPage status={status} onRefresh={fetchStatus} />
+            case 'help': return <HelpPage />
             case 'config': return <ConfigPage />
             case 'groups': return <GroupsPage />
+            case 'points-ranking': return <PointsRankingPage />
+            case 'active-ranking': return <ActiveRankingPage />
             case 'checkin': return <CheckinDataPage />
             case 'template': return <TemplatePage />
             case 'apidocs': return <ApiDocsPage />

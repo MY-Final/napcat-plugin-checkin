@@ -1,4 +1,4 @@
-import type { ApiResponse, RankingData, CheckinStats, GroupCheckinStats } from '../types'
+import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats } from '../types'
 
 function resolvePluginName(): string {
     if (window.__PLUGIN_NAME__) return window.__PLUGIN_NAME__
@@ -67,9 +67,14 @@ export async function authFetch<T = unknown>(path: string, options: RequestInit 
 
 // ==================== 签到数据 API ====================
 
-/** 获取全服排行榜 */
+/** 获取全服排行榜（按积分） */
 export async function getRanking(): Promise<ApiResponse<RankingData>> {
     return noAuthFetch('/checkin/ranking')
+}
+
+/** 获取活跃排行榜（按使用天数） */
+export async function getActiveRanking(): Promise<ApiResponse<ActiveRankingData>> {
+    return noAuthFetch('/checkin/active-ranking')
 }
 
 /** 获取签到统计 */

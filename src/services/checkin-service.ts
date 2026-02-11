@@ -230,6 +230,8 @@ export async function performCheckin(
                 totalPoints: 0,
                 lastCheckinDate: '',
                 checkinHistory: [],
+                activeDays: 0,
+                lastActiveDate: '',
             };
         }
         
@@ -239,10 +241,14 @@ export async function performCheckin(
         const globalDailyStats = loadGroupDailyStats('global');
         const globalRank = globalDailyStats.userIds.length + 1;
         
-        // 只有今天没签到过才增加天数和积分
+        // 只有今天没签到过才增加天数、积分和活跃天数
         if (!hasCheckedInToday) {
             globalUserData.totalCheckinDays += 1;
             globalUserData.totalPoints += globalPoints;
+            
+            // 更新活跃天数（每天首次使用机器人，不管在哪个群）
+            globalUserData.activeDays += 1;
+            globalUserData.lastActiveDate = today;
             
             // 添加到全局历史记录
             globalUserData.checkinHistory.push({
@@ -371,10 +377,215 @@ export function getAllUsersData(): Map<string, UserCheckinData> {
 }
 
 /**
+ * 获取活跃排行（按活跃天数排序）
+ * 用于识别最忠实的用户
+ */
+export function getActiveRanking(limit: number = 100): Array<{
+    userId: string;
+    nickname: string;
+    activeDays: number;
+    totalCheckinDays: number;
+    totalPoints: number;
+    lastActiveDate: string;
+}> {
+    const allUsers = loadGlobalUsersData();
+    return Array.from(allUsers.values())
+        .sort((a, b) => b.activeDays - a.activeDays)
+        .slice(0, limit)
+        .map(user => ({
+            userId: user.userId,
+            nickname: user.nickname,
+            activeDays: user.activeDays || 0,
+            totalCheckinDays: user.totalCheckinDays,
+            totalPoints: user.totalPoints,
+            lastActiveDate: user.lastActiveDate || '',
+        }));
+}
+
+/**
  * 获取所有群内用户数据（用于群内排行）
  */
 export function getGroupAllUsersData(groupId: string): Map<string, GroupUserCheckinData> {
     return loadGroupUsersData(groupId);
+}
+
+// ==================== 群用户积分管理（CRUD）====================
+
+/**
+ * 获取群用户积分详情
+ * @param groupId 群号
+ * @param userId 用户ID
+ * @returns 用户积分数据
+ */
+export function getGroupUserPoints(groupId: string, userId: string): {
+    userId: string;
+    nickname: string;
+    totalPoints: number;
+    totalCheckinDays: number;
+} | null {
+    const groupUsers = loadGroupUsersData(groupId);
+    const userData = groupUsers.get(userId);
+    if (!userData) return null;
+
+    return {
+        userId: userData.userId,
+        nickname: userData.nickname,
+        totalPoints: userData.totalPoints,
+        totalCheckinDays: userData.totalCheckinDays,
+    };
+}
+
+/**
+ * 修改群用户积分（增加/减少）
+ * @param groupId 群号
+ * @param userId 用户ID
+ * @param points 变更积分（正数增加，负数减少）
+ * @param description 操作说明
+ * @param type 操作类型
+ * @param operatorId 操作者ID（可选）
+ * @returns 变更后的积分
+ */
+export function updateGroupUserPoints(
+    groupId: string,
+    userId: string,
+    points: number,
+    description: string,
+    type: 'signin' | 'admin' | 'exchange' | 'other' = 'other',
+    operatorId?: string
+): { success: boolean; newBalance: number; error?: string } {
+    try {
+        const groupUsers = loadGroupUsersData(groupId);
+        const userData = groupUsers.get(userId);
+
+        if (!userData) {
+            return { success: false, newBalance: 0, error: '用户不存在' };
+        }
+
+        // 计算新余额
+        const newBalance = userData.totalPoints + points;
+        if (newBalance < 0) {
+            return { success: false, newBalance: userData.totalPoints, error: '积分不足' };
+        }
+
+        // 更新积分
+        userData.totalPoints = newBalance;
+
+        // 记录变更历史
+        if (!userData.pointsHistory) {
+            userData.pointsHistory = [];
+        }
+
+        const now = new Date();
+        userData.pointsHistory.push({
+            timestamp: now.getTime(),
+            date: now.toISOString().split('T')[0],
+            time: now.toTimeString().split(' ')[0],
+            points: points,
+            balance: newBalance,
+            type: type,
+            description: description,
+            operatorId: operatorId,
+        });
+
+        // 限制历史记录长度（保留最近100条）
+        if (userData.pointsHistory.length > 100) {
+            userData.pointsHistory = userData.pointsHistory.slice(-100);
+        }
+
+        // 保存数据
+        groupUsers.set(userId, userData);
+        saveGroupUsersData(groupId);
+
+        return { success: true, newBalance };
+    } catch (error) {
+        return { success: false, newBalance: 0, error: String(error) };
+    }
+}
+
+/**
+ * 获取群用户积分变更历史
+ * @param groupId 群号
+ * @param userId 用户ID
+ * @param limit 限制条数
+ * @returns 积分变更记录列表
+ */
+export function getGroupUserPointsHistory(
+    groupId: string,
+    userId: string,
+    limit: number = 50
+): {
+    timestamp: number;
+    date: string;
+    time: string;
+    points: number;
+    balance: number;
+    type: string;
+    description: string;
+    operatorId?: string;
+}[] {
+    const groupUsers = loadGroupUsersData(groupId);
+    const userData = groupUsers.get(userId);
+
+    if (!userData || !userData.pointsHistory) {
+        return [];
+    }
+
+    return userData.pointsHistory.slice(-limit).reverse();
+}
+
+/**
+ * 重置群用户积分（谨慎使用）
+ * @param groupId 群号
+ * @param userId 用户ID
+ * @param description 操作说明
+ * @param operatorId 操作者ID
+ * @returns 是否成功
+ */
+export function resetGroupUserPoints(
+    groupId: string,
+    userId: string,
+    description: string = '积分重置',
+    operatorId?: string
+): { success: boolean; error?: string } {
+    try {
+        const groupUsers = loadGroupUsersData(groupId);
+        const userData = groupUsers.get(userId);
+
+        if (!userData) {
+            return { success: false, error: '用户不存在' };
+        }
+
+        const oldPoints = userData.totalPoints;
+        const pointsChange = -oldPoints;
+
+        // 重置积分
+        userData.totalPoints = 0;
+
+        // 记录变更历史
+        if (!userData.pointsHistory) {
+            userData.pointsHistory = [];
+        }
+
+        const now = new Date();
+        userData.pointsHistory.push({
+            timestamp: now.getTime(),
+            date: now.toISOString().split('T')[0],
+            time: now.toTimeString().split(' ')[0],
+            points: pointsChange,
+            balance: 0,
+            type: 'admin',
+            description: description,
+            operatorId: operatorId,
+        });
+
+        // 保存数据
+        groupUsers.set(userId, userData);
+        saveGroupUsersData(groupId);
+
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
 }
 
 /**

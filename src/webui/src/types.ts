@@ -93,6 +93,7 @@ export interface CheckinStats {
     totalUsers: number
     totalCheckins: number
     totalPoints: number
+    totalActiveDays: number
     todayCheckins: number
     activeUsers: number
 }
@@ -100,4 +101,21 @@ export interface CheckinStats {
 export interface RankingData {
     totalUsers: number
     ranking: UserRanking[]
+}
+
+// 活跃排行
+export interface ActiveRankingItem {
+    userId: string
+    nickname: string
+    activeDays: number
+    totalCheckinDays: number
+    totalPoints: number
+    lastActiveDate: string
+}
+
+export interface ActiveRankingData {
+    totalUsers: number
+    rankingType: string
+    rankingDescription: string
+    ranking: ActiveRankingItem[]
 }

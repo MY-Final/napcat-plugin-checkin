@@ -198,6 +198,105 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'get-user-points',
+    method: 'GET',
+    path: '/checkin/groups/:groupId/users/:userId/points',
+    title: '获取用户积分',
+    description: '获取指定用户在群内的积分详情',
+    response: `{
+  "code": 0,
+  "data": {
+    "userId": "1150880493",
+    "nickname": "Final",
+    "totalPoints": 500,
+    "totalCheckinDays": 20
+  }
+}`
+  },
+  {
+    id: 'update-user-points',
+    method: 'POST',
+    path: '/checkin/groups/:groupId/users/:userId/points',
+    title: '修改用户积分',
+    description: '增加或减少用户的群内积分（用于兑换奖励等场景）',
+    params: [
+      { name: 'points', type: 'number', required: true, description: '变更积分（正数增加，负数减少）' },
+      { name: 'description', type: 'string', required: true, description: '操作说明，如"兑换奖励-xxx"' },
+      { name: 'type', type: 'string', required: false, description: '操作类型: signin/admin/exchange/other' },
+      { name: 'operatorId', type: 'string', required: false, description: '操作者ID（管理员操作时记录）' },
+    ],
+    response: `{
+  "code": 0,
+  "data": {
+    "userId": "1150880493",
+    "groupId": "123456",
+    "changedPoints": -100,
+    "newBalance": 400,
+    "description": "兑换奖励-精美头像框"
+  }
+}`,
+    example: `{
+  "points": -100,
+  "description": "兑换奖励-精美头像框",
+  "type": "exchange",
+  "operatorId": "admin123"
+}`
+  },
+  {
+    id: 'get-points-history',
+    method: 'GET',
+    path: '/checkin/groups/:groupId/users/:userId/points/history',
+    title: '积分变更历史',
+    description: '获取用户积分的变更记录（支持兑换追溯）',
+    params: [
+      { name: 'limit', type: 'number', required: false, description: '返回条数限制（默认50）' },
+    ],
+    response: `{
+  "code": 0,
+  "data": {
+    "userId": "1150880493",
+    "groupId": "123456",
+    "totalRecords": 10,
+    "history": [
+      {
+        "timestamp": 1707234567890,
+        "date": "2026-02-11",
+        "time": "14:30:25",
+        "points": -100,
+        "balance": 400,
+        "type": "exchange",
+        "description": "兑换奖励-精美头像框",
+        "operatorId": "admin123"
+      }
+    ]
+  }
+}`
+  },
+  {
+    id: 'reset-user-points',
+    method: 'POST',
+    path: '/checkin/groups/:groupId/users/:userId/points/reset',
+    title: '重置用户积分',
+    description: '将用户积分重置为0（谨慎使用，会记录操作日志）',
+    params: [
+      { name: 'description', type: 'string', required: false, description: '重置原因说明' },
+      { name: 'operatorId', type: 'string', required: false, description: '操作者ID' },
+    ],
+    response: `{
+  "code": 0,
+  "data": {
+    "userId": "1150880493",
+    "groupId": "123456",
+    "newBalance": 0,
+    "message": "积分已重置"
+  }
+}`,
+    example: `{
+  "description": "违规处罚-积分清零",
+  "operatorId": "admin123"
+}`
+  },
+  {
     id: 'template-preview',
     method: 'POST',
     path: '/template/preview',
@@ -412,10 +511,33 @@ export default function ApiDocsPage() {
             ))}
 
             <div className="pt-4 pb-2">
+              <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">积分管理</p>
+            </div>
+
+            {API_ENDPOINTS.slice(11, 15).map((endpoint) => (
+              <button
+                key={endpoint.id}
+                onClick={() => setActiveSection(endpoint.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeSection === endpoint.id
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <span className={`text-xs ${
+                  endpoint.method === 'GET' ? 'text-blue-500' : 'text-orange-500'
+                }`}>
+                  {endpoint.method}
+                </span>
+                <span className="truncate">{endpoint.path}</span>
+              </button>
+            ))}
+
+            <div className="pt-4 pb-2">
               <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">模板服务</p>
             </div>
 
-            {API_ENDPOINTS.slice(11).map((endpoint) => (
+            {API_ENDPOINTS.slice(15).map((endpoint) => (
               <button
                 key={endpoint.id}
                 onClick={() => setActiveSection(endpoint.id)}
