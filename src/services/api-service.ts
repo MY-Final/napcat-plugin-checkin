@@ -21,6 +21,8 @@ import {
     getGroupUserPointsHistory,
     resetGroupUserPoints
 } from './checkin-service';
+import { getLeaderboard } from './leaderboard-service';
+import type { LeaderboardType } from '../types';
 
 /**
  * 注册 API 路由
@@ -522,6 +524,36 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
             });
         } catch (err) {
             ctx.logger.error('重置用户积分失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    // ==================== 排行榜 API（无鉴权）====================
+
+    /** 获取排行榜数据 */
+    router.getNoAuth('/leaderboard/:groupId', (req, res) => {
+        try {
+            const groupId = req.params?.groupId;
+            const type = (req.query?.type as LeaderboardType) || 'week';
+            
+            if (!groupId) {
+                return res.status(400).json({ code: -1, message: '缺少群 ID' });
+            }
+
+            // 验证类型
+            const validTypes: LeaderboardType[] = ['week', 'month', 'year', 'all'];
+            if (!validTypes.includes(type)) {
+                return res.status(400).json({ code: -1, message: '无效的排行榜类型' });
+            }
+
+            const leaderboardData = getLeaderboard(groupId, type);
+            
+            res.json({
+                code: 0,
+                data: leaderboardData,
+            });
+        } catch (err) {
+            ctx.logger.error('获取排行榜失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });

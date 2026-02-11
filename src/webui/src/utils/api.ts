@@ -1,4 +1,4 @@
-import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats, UserCheckinData } from '../types'
+import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats, UserCheckinData, LeaderboardData, LeaderboardType } from '../types'
 
 function resolvePluginName(): string {
     if (window.__PLUGIN_NAME__) return window.__PLUGIN_NAME__
@@ -95,4 +95,11 @@ export async function getGroupsStats(): Promise<ApiResponse<GroupCheckinStats[]>
 /** 获取指定群统计 */
 export async function getGroupStats(groupId: string): Promise<ApiResponse<GroupCheckinStats>> {
     return noAuthFetch(`/checkin/groups/${groupId}`)
+}
+
+// ==================== 排行榜 API ====================
+
+/** 获取排行榜数据 */
+export async function getLeaderboard(groupId: string, type: LeaderboardType): Promise<ApiResponse<LeaderboardData>> {
+    return noAuthFetch(`/leaderboard/${groupId}?type=${type}`)
 }

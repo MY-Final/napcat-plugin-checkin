@@ -89,6 +89,12 @@ export interface PluginConfig {
     customHtmlTemplate?: string;
     /** 签到刷新时间配置 */
     checkinRefreshTime: CheckinRefreshTimeConfig;
+    /** 是否启用排行榜功能 */
+    enableLeaderboard: boolean;
+    /** 排行榜命令关键词列表 */
+    leaderboardCommands: string;
+    /** 排行榜显示数量 */
+    leaderboardTopCount: number;
 }
 
 /**
@@ -334,4 +340,51 @@ export interface CheckinCardData {
     consecutiveBonus: number;
     /** 周末加成 */
     weekendBonus: number;
+}
+
+// ==================== 排行榜数据 ====================
+
+/**
+ * 排行榜类型
+ */
+export type LeaderboardType = 'week' | 'month' | 'year' | 'all';
+
+/**
+ * 排行榜用户数据
+ */
+export interface LeaderboardUser {
+    /** 用户ID */
+    userId: string;
+    /** 用户昵称 */
+    nickname: string;
+    /** 头像URL */
+    avatarUrl: string;
+    /** 周期内积分 */
+    periodPoints: number;
+    /** 总积分 */
+    totalPoints: number;
+    /** 签到天数 */
+    checkinDays: number;
+    /** 排名 */
+    rank: number;
+}
+
+/**
+ * 排行榜数据
+ */
+export interface LeaderboardData {
+    /** 排行榜类型 */
+    type: LeaderboardType;
+    /** 类型名称 */
+    typeName: string;
+    /** 群ID */
+    groupId: string;
+    /** 群名称 */
+    groupName: string;
+    /** 更新时间 */
+    updateTime: string;
+    /** 用户列表 */
+    users: LeaderboardUser[];
+    /** 当前用户排名 */
+    myRank?: LeaderboardUser;
 }

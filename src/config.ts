@@ -32,6 +32,9 @@ export const DEFAULT_CONFIG: PluginConfig = {
         cycleType: 'daily',
         cycleCount: 1,
     },
+    enableLeaderboard: true,
+    leaderboardCommands: '排行榜,排行,rank',
+    leaderboardTopCount: 10,
 };
 
 /**
@@ -91,5 +94,12 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
             { label: '每月', value: 'monthly' },
         ], 'daily', '设置签到周期'),
         ctx.NapCatConfig.number('checkinRefreshTime.cycleCount', '周期内可签到次数', 1, '每个周期内可以签到的次数（1=每天1次，2=每天2次等）'),
+
+        // 排行榜设置
+        ctx.NapCatConfig.plainText(' '),
+        ctx.NapCatConfig.plainText('排行榜设置'),
+        ctx.NapCatConfig.boolean('enableLeaderboard', '启用排行榜功能', true, '是否启用积分排行榜功能'),
+        ctx.NapCatConfig.text('leaderboardCommands', '排行榜命令列表', '排行榜,排行,rank', '触发排行榜的命令关键词，多个命令用英文逗号分隔'),
+        ctx.NapCatConfig.number('leaderboardTopCount', '排行榜显示数量', 10, '排行榜显示前几名（1-50）'),
     );
 }

@@ -11,7 +11,8 @@ import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
 import { handleCheckinCommand, handleCheckinAdmin, handleCheckinQuery, handleActiveRankingQuery } from './checkin-handler';
-import { getCheckinCommands } from '../types';
+import { getCheckinCommands, type LeaderboardType } from '../types';
+import { getLeaderboard, parseLeaderboardCommand, generateLeaderboardText, generateLeaderboardHTML } from '../services/leaderboard-service';
 
 // ==================== CD 冷却管理 ====================
 
@@ -201,6 +202,18 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                     ``,
                 ];
                 
+                // 排行榜功能
+                if (pluginState.config.enableLeaderboard) {
+                    helpText.push(
+                        `【排行榜】`,
+                        `${prefix}周榜 - 查看本周积分排行`,
+                        `${prefix}月榜 - 查看本月积分排行`,
+                        `${prefix}年榜 - 查看年度积分排行`,
+                        `${prefix}总榜 - 查看总积分排行`,
+                        ``
+                    );
+                }
+                
                 // 群管理命令
                 if (isGroup && isAdminUser) {
                     helpText.push(
@@ -304,7 +317,54 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 break;
             }
 
+            case '周榜':
+            case '月榜':
+            case '年榜':
+            case '总榜': {
+                if (!pluginState.config.enableLeaderboard) {
+                    await sendReply(ctx, event, '排行榜功能未启用');
+                    break;
+                }
+                
+                if (messageType !== 'group' || !groupId) {
+                    await sendReply(ctx, event, '此命令只能在群聊中使用');
+                    break;
+                }
+                
+                // 解析排行榜类型
+                const typeMap: Record<string, LeaderboardType> = {
+                    '周榜': 'week',
+                    '月榜': 'month',
+                    '年榜': 'year',
+                    '总榜': 'all',
+                };
+                const lbType = typeMap[subCommand] || 'week';
+                
+                // 获取排行榜数据
+                const userId = String(event.user_id);
+                const leaderboardData = getLeaderboard(String(groupId), lbType, userId);
+                
+                // 生成排行榜文本
+                const text = generateLeaderboardText(leaderboardData);
+                await sendReply(ctx, event, text);
+                
+                pluginState.incrementProcessed();
+                break;
+            }
+
             default: {
+                // 检查是否是排行榜命令（自定义关键词）
+                if (pluginState.config.enableLeaderboard) {
+                    const leaderboardType = parseLeaderboardCommand(rawMessage);
+                    if (leaderboardType && messageType === 'group' && groupId) {
+                        const userId = String(event.user_id);
+                        const leaderboardData = getLeaderboard(String(groupId), leaderboardType, userId);
+                        const text = generateLeaderboardText(leaderboardData);
+                        await sendReply(ctx, event, text);
+                        pluginState.incrementProcessed();
+                        return;
+                    }
+                }
                 // 未知命令不处理
                 break;
             }

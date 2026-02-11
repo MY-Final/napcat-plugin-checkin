@@ -59,6 +59,11 @@ function sanitizeConfig(raw: unknown): PluginConfig {
         if (typeof refreshTime.cycleCount === 'number') out.checkinRefreshTime.cycleCount = Math.max(1, refreshTime.cycleCount);
     }
 
+    // 排行榜配置清洗
+    if (typeof raw.enableLeaderboard === 'boolean') out.enableLeaderboard = raw.enableLeaderboard;
+    if (typeof raw.leaderboardCommands === 'string') out.leaderboardCommands = raw.leaderboardCommands;
+    if (typeof raw.leaderboardTopCount === 'number') out.leaderboardTopCount = Math.max(1, Math.min(50, raw.leaderboardTopCount));
+
     return out;
 }
 

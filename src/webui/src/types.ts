@@ -142,3 +142,27 @@ export interface UserCheckinData {
     activeDays?: number
     lastActiveDate?: string
 }
+
+// ==================== 排行榜类型 ====================
+
+export type LeaderboardType = 'week' | 'month' | 'year' | 'all'
+
+export interface LeaderboardUser {
+    userId: string
+    nickname: string
+    avatarUrl: string
+    periodPoints: number
+    totalPoints: number
+    checkinDays: number
+    rank: number
+}
+
+export interface LeaderboardData {
+    type: LeaderboardType
+    typeName: string
+    groupId: string
+    groupName: string
+    updateTime: string
+    users: LeaderboardUser[]
+    myRank?: LeaderboardUser
+}

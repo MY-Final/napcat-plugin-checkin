@@ -11,6 +11,7 @@ const menuItems: { id: PageId; label: string; icon: React.ReactNode }[] = [
     { id: 'help', label: '使用说明', icon: <IconHelp size={18} /> },
     { id: 'config', label: '插件配置', icon: <IconSettings size={18} /> },
     { id: 'groups', label: '群管理', icon: <IconGroup size={18} /> },
+    { id: 'leaderboard', label: '排行榜', icon: <IconTrophy size={18} /> },
     { id: 'points-ranking', label: '积分排行', icon: <IconTrophy size={18} /> },
     { id: 'active-ranking', label: '活跃排行', icon: <IconActivity size={18} /> },
     { id: 'checkin', label: '分群排行', icon: <IconChart size={18} /> },
