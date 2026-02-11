@@ -112,7 +112,7 @@ export default function CheckinDataPage() {
                     >
                         {groupsStats.map(group => (
                             <option key={group.groupId} value={group.groupId}>
-                                {group.groupName || group.groupId} ({group.totalCheckins}人签到)
+                                {group.groupName ? `${group.groupName} (${group.groupId})` : group.groupId} - {group.totalCheckins}人签到
                             </option>
                         ))}
                     </select>
@@ -212,7 +212,9 @@ export default function CheckinDataPage() {
                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {selectedGroupData.groupName || selectedGroupData.groupId} 签到排行
+                                {selectedGroupData.groupName ? (
+                                    <>{selectedGroupData.groupName} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({selectedGroupData.groupId})</span></>
+                                ) : selectedGroupData.groupId} 签到排行
                             </h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 群内共 {selectedGroupData.totalCheckins} 人签到，总积分 {selectedGroupData.totalPoints.toLocaleString()}，今日 {selectedGroupData.todayCheckins} 人签到

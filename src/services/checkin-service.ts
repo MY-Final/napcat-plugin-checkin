@@ -14,6 +14,8 @@ import type {
 } from '../types';
 import { pluginState } from '../core/state';
 import { calculatePoints } from './points-calculator';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // 数据文件路径
 const USERS_DATA_FILE = 'checkin-users.json';           // 全局用户数据（全服排行）
@@ -83,16 +85,24 @@ function loadGroupUsersData(groupId: string): Map<string, GroupUserCheckinData> 
 
 /**
  * 保存群内用户数据
+ * @param groupId 群号
+ * @param groupName 群名称（可选，首次保存时传入）
  */
-function saveGroupUsersData(groupId: string): void {
+function saveGroupUsersData(groupId: string, groupName?: string): void {
     const users = groupUsersCache.get(groupId);
     if (!users) return;
     
     const fileName = getGroupDataFile(groupId);
     const groupData = pluginState.loadDataFile<{
+        groupName?: string;
         users?: Record<string, GroupUserCheckinData>;
         dailyStats?: Record<string, DailyCheckinStats>;
     }>(fileName, {});
+    
+    // 更新群名称（如果提供了）
+    if (groupName) {
+        groupData.groupName = groupName;
+    }
     
     groupData.users = Object.fromEntries(users);
     pluginState.saveDataFile(fileName, groupData);
@@ -155,7 +165,8 @@ function saveGroupDailyStats(groupId: string): void {
 export async function performCheckin(
     userId: string,
     nickname: string,
-    groupId?: string
+    groupId?: string,
+    groupName?: string
 ): Promise<CheckinResult> {
     try {
         const today = getTodayStr();
@@ -202,15 +213,11 @@ export async function performCheckin(
             }
         }
         
-        // 5. 计算积分（如果今天已经签到过，不重复给分）
-        let totalPoints = 0;
-        let breakdown: PointsBreakdown = { base: 0, consecutiveBonus: 0, weekendBonus: 0, specialDayBonus: 0 };
-        if (!hasCheckedInToday) {
-            const config = pluginState.config.checkinPoints;
-            const result = calculatePoints(config, globalConsecutiveDays);
-            totalPoints = result.totalPoints;
-            breakdown = result.breakdown;
-        }
+        // 5. 计算积分（群内签到始终给分，但全局积分今天已签到过则不再给）
+        const config = pluginState.config.checkinPoints;
+        const pointsResult = calculatePoints(config, globalConsecutiveDays);
+        const groupPoints = pointsResult.totalPoints; // 群内积分始终给
+        const globalPoints = hasCheckedInToday ? 0 : pointsResult.totalPoints; // 全局积分今天已签到则不给
         
         // 6. 更新全局用户数据
         const isFirstTime = !globalUserData;
@@ -235,12 +242,12 @@ export async function performCheckin(
         // 只有今天没签到过才增加天数和积分
         if (!hasCheckedInToday) {
             globalUserData.totalCheckinDays += 1;
-            globalUserData.totalPoints += totalPoints;
+            globalUserData.totalPoints += globalPoints;
             
             // 添加到全局历史记录
             globalUserData.checkinHistory.push({
                 date: today,
-                points: totalPoints,
+                points: globalPoints,
                 time: currentTime,
                 rank: globalRank,
                 groupId: groupId || undefined,
@@ -296,7 +303,7 @@ export async function performCheckin(
             groupUserData.nickname = nickname;
             groupUserData.totalCheckinDays += 1;
             groupUserData.consecutiveDays = groupConsecutiveDays;
-            groupUserData.totalPoints += totalPoints;
+            groupUserData.totalPoints += groupPoints; // 使用群内积分
             groupUserData.lastCheckinDate = today;
             
             // 群内排名
@@ -305,7 +312,7 @@ export async function performCheckin(
             
             groupUserData.checkinHistory.push({
                 date: today,
-                points: totalPoints,
+                points: groupPoints, // 使用群内积分
                 time: currentTime,
                 rank: groupRank,
                 groupId,
@@ -317,7 +324,7 @@ export async function performCheckin(
             }
             
             groupUsers.set(userId, groupUserData);
-            saveGroupUsersData(groupId);
+            saveGroupUsersData(groupId, groupName);
             
             // 更新群内每日统计
             groupDailyStats.totalCheckins += 1;
@@ -329,11 +336,11 @@ export async function performCheckin(
             success: true,
             isFirstTime,
             userData: globalUserData,
-            earnedPoints: totalPoints,
+            earnedPoints: groupId ? groupPoints : globalPoints, // 群内签到返回群内积分，否则返回全局积分
             todayRank: groupRank,
             checkinTime: currentTime,
             consecutiveDays: globalConsecutiveDays,
-            breakdown,
+            breakdown: pointsResult.breakdown,
         };
         
     } catch (error) {
@@ -452,6 +459,14 @@ export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
     const today = getTodayStr();
     const todayStats = loadGroupDailyStats(groupId);
     
+    // 读取群名称
+    const fileName = getGroupDataFile(groupId);
+    const groupData = pluginState.loadDataFile<{
+        groupName?: string;
+        users?: Record<string, GroupUserCheckinData>;
+        dailyStats?: Record<string, DailyCheckinStats>;
+    }>(fileName, {});
+    
     let totalPoints = 0;
     let todayCheckins = 0;
     const users: GroupUserInfo[] = [];
@@ -474,6 +489,7 @@ export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
     
     return {
         groupId,
+        groupName: groupData.groupName,
         totalCheckins: groupUsers.size,
         totalPoints,
         todayCheckins,
@@ -485,7 +501,28 @@ export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
  * 获取所有群统计数据
  */
 export function getAllGroupsStats(): GroupCheckinStats[] {
-    // 这里需要扫描数据目录获取所有群文件
-    // 暂时返回空数组，后续可以实现文件扫描
-    return [];
+    try {
+        const dataPath = pluginState.ctx.dataPath;
+        if (!fs.existsSync(dataPath)) {
+            return [];
+        }
+
+        const files = fs.readdirSync(dataPath);
+        const groupFiles = files.filter(file => file.startsWith(GROUP_DATA_PREFIX) && file.endsWith('.json'));
+
+        const groupsStats: GroupCheckinStats[] = [];
+        for (const file of groupFiles) {
+            // 从文件名中提取群号
+            const groupId = file.replace(GROUP_DATA_PREFIX, '').replace('.json', '');
+            if (groupId && groupId !== 'global') {
+                const stats = getGroupCheckinStats(groupId);
+                groupsStats.push(stats);
+            }
+        }
+
+        return groupsStats;
+    } catch (error) {
+        pluginState.logger.error('获取所有群统计数据失败:', error);
+        return [];
+    }
 }

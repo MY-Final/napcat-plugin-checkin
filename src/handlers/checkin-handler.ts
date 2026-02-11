@@ -71,6 +71,23 @@ export async function handleCheckinCommand(
         const userId = String(event.user_id);
         const nickname = event.sender?.nickname || '未知用户';
         const groupId = event.group_id ? String(event.group_id) : undefined;
+        let groupName: string | undefined;
+
+        // 获取群名称（如果在群里）
+        if (groupId) {
+            try {
+                const groups = await ctx.actions.call(
+                    'get_group_list',
+                    {},
+                    ctx.adapterName,
+                    ctx.pluginManager.config
+                ) as Array<{ group_id: number; group_name: string; member_count: number; max_member_count: number }>;
+                const group = groups.find(g => String(g.group_id) === groupId);
+                groupName = group?.group_name || groupId;
+            } catch {
+                groupName = groupId; // 获取失败就用群号
+            }
+        }
 
         // 检查CD
         const remaining = getCooldownRemaining(userId);
@@ -80,7 +97,7 @@ export async function handleCheckinCommand(
         }
 
         // 执行签到
-        const result = await performCheckin(userId, nickname, groupId);
+        const result = await performCheckin(userId, nickname, groupId, groupName);
 
         if (!result.success) {
             if (result.error?.includes('已经签到')) {
