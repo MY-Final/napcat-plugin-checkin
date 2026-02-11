@@ -11,15 +11,15 @@ interface TemplateVariable {
 const TEMPLATE_VARIABLES: TemplateVariable[] = [
   { name: '{{nickname}}', description: '用户昵称', example: 'Final' },
   { name: '{{userId}}', description: '用户QQ号', example: '1150880493' },
-  { name: '{{avatarUrl}}', description: '用户头像URL', example: 'http://q.qlogo.cn/...' },
-  { name: '{{earnedPoints}}', description: '本次获得积分', example: '222' },
-  { name: '{{totalPoints}}', description: '累计积分', example: '1222' },
+  { name: '{{avatarUrl}}', description: '用户头像URL', example: 'http://q.qlogo.cn/headimg_dl?dst_uin=1150880493&spec=640&img_type=jpg' },
+  { name: '{{earnedPoints}}', description: '本次获得积分', example: '21' },
+  { name: '{{totalPoints}}', description: '累计积分', example: '44' },
   { name: '{{totalDays}}', description: '累计签到天数', example: '1' },
   { name: '{{todayRank}}', description: '今日排名', example: '1' },
   { name: '{{checkinTime}}', description: '签到时间', example: '91:91:91' },
-  { name: '{{currentDate}}', description: '当前日期', example: '9191年91月91日' },
+  { name: '{{currentDate}}', description: '当前日期', example: '91年91月91日' },
   { name: '{{quote}}', description: '随机寄语', example: '只因你太美' },
-  { name: '{{consecutiveDays}}', description: '连续签到天数', example: '91' },
+  { name: '{{consecutiveDays}}', description: '连续签到天数', example: '1' },
 ]
 
 const DEFAULT_TEMPLATE = `<!DOCTYPE html>
@@ -188,16 +188,16 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
 </html>`
 
 const DEFAULT_TEST_DATA = {
-  nickname: '小甜心',
+  nickname: 'Final',
   userId: '1150880493',
   avatarUrl: 'http://q.qlogo.cn/headimg_dl?dst_uin=1150880493&spec=640&img_type=jpg',
   earnedPoints: 21,
   totalPoints: 44,
   totalDays: 1,
   todayRank: 1,
-  checkinTime: '22:37:08',
-  currentDate: '2026年2月10日',
-  quote: '保持热爱，奔赴山海。新的一天也要加油呀！',
+  checkinTime: '91:91:91',
+  currentDate: '91年91月91日',
+  quote: '只因你太美',
   consecutiveDays: 1,
 }
 
