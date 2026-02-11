@@ -7,7 +7,7 @@ import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
 import { performCheckin, getUserCheckinData } from '../services/checkin-service';
-import { generateCheckinCard, getAvatarUrl } from '../services/canvas-service';
+import { renderCheckinCard, getAvatarUrl } from '../services/puppeteer-service';
 import { getRandomQuote } from '../utils/checkin-messages';
 import { sendReply } from './message-handler';
 import type { CheckinCardData } from '../types';
@@ -113,15 +113,15 @@ export async function handleCheckinCommand(
         if (replyMode === 'image') {
             useImageMode = true;
         } else if (replyMode === 'auto') {
-            // auto 模式下，如果 canvas 可用则使用图片
-            const imageBuffer = await generateCheckinCard(cardData);
+            // auto 模式下，尝试生成图片，如果成功则使用图片
+            const imageBuffer = await renderCheckinCard(cardData);
             useImageMode = imageBuffer !== null;
         }
         // replyMode === 'text' 时 useImageMode 保持 false
 
         if (useImageMode) {
             // 图片模式：发送图片卡片
-            const imageBuffer = await generateCheckinCard(cardData);
+            const imageBuffer = await renderCheckinCard(cardData);
             if (imageBuffer) {
                 const base64Image = imageBuffer.toString('base64');
                 const message: OB11PostSendMsg['message'] = [

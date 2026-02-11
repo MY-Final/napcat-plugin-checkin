@@ -25,8 +25,6 @@
     "homepage": "https://github.com/MY-Final/napcat-plugin-checkin"
   },
   "dependencies": {
-    "axios": "^1.7.9",
-    "canvas": "^3.1.0",
     "napcat-types": "0.0.16"
   },
   "devDependencies": {
