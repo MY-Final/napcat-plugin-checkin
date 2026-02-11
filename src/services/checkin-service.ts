@@ -278,9 +278,10 @@ export async function performCheckin(
         
         // 6. 如果指定了群，更新群内数据
         let groupRank = globalRank;
+        let groupUserData: GroupUserCheckinData | undefined = undefined;
         if (groupId) {
             const groupUsers = loadGroupUsersData(groupId);
-            let groupUserData = groupUsers.get(userId);
+            groupUserData = groupUsers.get(userId);
             
             // 计算群内连续签到
             let groupConsecutiveDays = 1;
@@ -323,26 +324,26 @@ export async function performCheckin(
                 rank: groupRank,
                 groupId,
             });
-            
+
             // 限制历史记录长度
             if (groupUserData.checkinHistory.length > 365) {
                 groupUserData.checkinHistory = groupUserData.checkinHistory.slice(-365);
             }
-            
+
             groupUsers.set(userId, groupUserData);
             saveGroupUsersData(groupId, groupName);
-            
+
             // 更新群内每日统计
             groupDailyStats.totalCheckins += 1;
             groupDailyStats.userIds.push(userId);
             saveGroupDailyStats(groupId);
         }
-        
+
         return {
             success: true,
             isFirstTime,
             userData: globalUserData,
-            groupUserData: groupId ? groupUsers.get(userId) : undefined, // 返回群内数据（如果有）
+            groupUserData: groupUserData, // 返回群内数据（如果有）
             earnedPoints: groupId ? groupPoints : globalPoints, // 群内签到返回群内积分，否则返回全局积分
             todayRank: groupRank,
             checkinTime: currentTime,
