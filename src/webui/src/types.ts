@@ -121,3 +121,24 @@ export interface ActiveRankingData {
     rankingDescription: string
     ranking: ActiveRankingItem[]
 }
+
+// 用户签到数据
+export interface CheckinRecord {
+    date: string
+    points: number
+    time: string
+    rank: number
+    groupId?: string
+}
+
+export interface UserCheckinData {
+    userId: string
+    nickname: string
+    totalCheckinDays: number
+    consecutiveDays: number
+    totalPoints: number
+    lastCheckinDate: string
+    checkinHistory: CheckinRecord[]
+    activeDays?: number
+    lastActiveDate?: string
+}

@@ -184,9 +184,19 @@ export default function GroupsPage() {
                                     />
                                 </td>
                                 <td className="py-2.5 px-4">
-                                    <span className="text-gray-800 dark:text-gray-200 font-medium">
-                                        {group.group_name || '未知群'}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={`http://p.qlogo.cn/gh/${group.group_id}/${group.group_id}/640`}
+                                            alt={group.group_name || '群头像'}
+                                            className="w-8 h-8 rounded-lg object-cover"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(group.group_name || '群')}&size=100&background=FB7299&color=fff`;
+                                            }}
+                                        />
+                                        <span className="text-gray-800 dark:text-gray-200 font-medium">
+                                            {group.group_name || '未知群'}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td className="py-2.5 px-4 font-mono text-xs text-gray-500">{group.group_id}</td>
                                 <td className="py-2.5 px-4 text-xs text-gray-500">

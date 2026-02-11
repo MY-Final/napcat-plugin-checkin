@@ -1,4 +1,4 @@
-import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats } from '../types'
+import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats, UserCheckinData } from '../types'
 
 function resolvePluginName(): string {
     if (window.__PLUGIN_NAME__) return window.__PLUGIN_NAME__
@@ -75,6 +75,11 @@ export async function getRanking(): Promise<ApiResponse<RankingData>> {
 /** 获取活跃排行榜（按使用天数） */
 export async function getActiveRanking(): Promise<ApiResponse<ActiveRankingData>> {
     return noAuthFetch('/checkin/active-ranking')
+}
+
+/** 获取用户签到数据 */
+export async function getUserCheckinData(userId: string): Promise<ApiResponse<UserCheckinData>> {
+    return noAuthFetch(`/checkin/user/${userId}`)
 }
 
 /** 获取签到统计 */

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getGroupsStats, getGroupStats } from '../utils/api'
 import { showToast } from '../hooks/useToast'
+import UserDetailModal from '../components/UserDetailModal'
 import type { GroupCheckinStats } from '../types'
 
 export default function CheckinDataPage() {
@@ -8,6 +9,7 @@ export default function CheckinDataPage() {
     const [selectedGroup, setSelectedGroup] = useState<string>('')
     const [selectedGroupData, setSelectedGroupData] = useState<GroupCheckinStats | null>(null)
     const [loading, setLoading] = useState(false)
+    const [selectedUser, setSelectedUser] = useState<{ userId: string; nickname: string } | null>(null)
 
     const fetchData = async () => {
         setLoading(true)
@@ -167,7 +169,10 @@ export default function CheckinDataPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
+                                            <div 
+                                                className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                                                onClick={() => setSelectedUser({ userId: user.userId, nickname: user.nickname })}
+                                            >
                                                 <img
                                                     className="w-8 h-8 rounded-full mr-3 object-cover"
                                                     src={`http://q.qlogo.cn/headimg_dl?dst_uin=${user.userId}&spec=100&img_type=jpg`}
@@ -211,6 +216,15 @@ export default function CheckinDataPage() {
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">暂无群签到数据</h3>
                     <p className="text-gray-500 dark:text-gray-400">还没有用户在群内签到，快去群聊中使用签到功能吧！</p>
                 </div>
+            )}
+
+            {/* 用户详情弹窗 */}
+            {selectedUser && (
+                <UserDetailModal
+                    userId={selectedUser.userId}
+                    nickname={selectedUser.nickname}
+                    onClose={() => setSelectedUser(null)}
+                />
             )}
         </div>
     )

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getRanking, getCheckinStats } from '../utils/api'
 import { showToast } from '../hooks/useToast'
+import UserDetailModal from '../components/UserDetailModal'
 import type { UserRanking, CheckinStats } from '../types'
 
 export default function PointsRankingPage() {
     const [ranking, setRanking] = useState<UserRanking[]>([])
     const [stats, setStats] = useState<CheckinStats | null>(null)
     const [loading, setLoading] = useState(false)
+    const [selectedUser, setSelectedUser] = useState<{ userId: string; nickname: string } | null>(null)
 
     const fetchData = async () => {
         setLoading(true)
@@ -107,7 +109,10 @@ export default function PointsRankingPage() {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
+                                        <div 
+                                            className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => setSelectedUser({ userId: user.userId, nickname: user.nickname })}
+                                        >
                                             <img
                                                 className="w-8 h-8 rounded-full mr-3 object-cover"
                                                 src={`http://q.qlogo.cn/headimg_dl?dst_uin=${user.userId}&spec=100&img_type=jpg`}
@@ -151,6 +156,15 @@ export default function PointsRankingPage() {
                     )}
                 </div>
             </div>
+
+            {/* 用户详情弹窗 */}
+            {selectedUser && (
+                <UserDetailModal
+                    userId={selectedUser.userId}
+                    nickname={selectedUser.nickname}
+                    onClose={() => setSelectedUser(null)}
+                />
+            )}
         </div>
     )
 }
