@@ -71,6 +71,8 @@ export interface PluginConfig {
     checkinPoints: CheckinPointsConfig;
     /** 签到回复模式：text=文字, image=图片, auto=自动（有canvas用图片，否则文字） */
     checkinReplyMode: 'text' | 'image' | 'auto';
+    /** 自定义 HTML 模板（可选） */
+    customHtmlTemplate?: string;
 }
 
 /**

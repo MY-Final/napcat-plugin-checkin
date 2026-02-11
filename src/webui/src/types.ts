@@ -23,6 +23,8 @@ export interface PluginConfig {
     checkinCommands: string  // 逗号分隔的命令列表
     checkinCommand?: string  // 向后兼容
     checkinReplyMode: 'text' | 'image' | 'auto'
+    // 自定义 HTML 模板
+    customHtmlTemplate?: string
     checkinPoints: {
         minPoints: number
         maxPoints: number

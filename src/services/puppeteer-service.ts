@@ -259,16 +259,25 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * 调用 Puppeteer 插件渲染 HTML 成图片
+ * 将模板变量替换为实际数据
  */
-export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer | null> {
+function replaceTemplateVariables(template: string, data: Record<string, string | number>): string {
+    return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+        const value = data[key];
+        return value !== undefined ? String(value) : match;
+    });
+}
+
+/**
+ * 调用 Puppeteer 插件渲染任意 HTML 成图片
+ */
+export async function renderHtmlToImage(
+    html: string,
+    viewport?: { width: number; height: number; deviceScaleFactor?: number }
+): Promise<{ image: string; time: number } | null> {
+    const startTime = Date.now();
+    
     try {
-        pluginState.logger.info('开始调用 Puppeteer 渲染签到卡片...');
-        
-        const html = generateCheckinHtml(data);
-        
-        pluginState.logger.debug(`发送请求到: ${PUPPETEER_API}`);
-        
         const response = await fetch(PUPPETEER_API, {
             method: 'POST',
             headers: {
@@ -277,7 +286,7 @@ export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer |
             body: JSON.stringify({
                 html: html,
                 encoding: 'base64',
-                setViewport: {
+                setViewport: viewport || {
                     width: 600,
                     height: 380,
                     deviceScaleFactor: 2,
@@ -287,8 +296,7 @@ export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer |
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            pluginState.logger.error(`Puppeteer API 请求失败: ${response.status} - ${errorText}`);
+            pluginState.logger.error(`Puppeteer API 请求失败: ${response.status}`);
             return null;
         }
         
@@ -299,14 +307,93 @@ export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer |
             return null;
         }
         
-        pluginState.logger.info('Puppeteer 渲染成功');
+        const renderTime = Date.now() - startTime;
+        
+        // 返回完整的 base64 data URL
+        const imageData = result.data.startsWith('data:') 
+            ? result.data 
+            : `data:image/png;base64,${result.data}`;
+        
+        return { image: imageData, time: renderTime };
+        
+    } catch (error) {
+        pluginState.logger.error('调用 Puppeteer 失败:', error instanceof Error ? error.message : String(error));
+        return null;
+    }
+}
+
+/**
+ * 调用 Puppeteer 插件渲染签到卡片
+ */
+export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer | null> {
+    try {
+        pluginState.logger.info('开始调用 Puppeteer 渲染签到卡片...');
+        
+        // 检查是否有自定义模板
+        const customTemplate = pluginState.config.customHtmlTemplate;
+        let html: string;
+        
+        if (customTemplate) {
+            pluginState.logger.debug('使用自定义 HTML 模板');
+            // 将数据转换为模板变量格式
+            const templateData: Record<string, string | number> = {
+                nickname: data.nickname,
+                userId: data.userId,
+                avatarUrl: data.avatarUrl,
+                earnedPoints: data.earnedPoints,
+                totalPoints: data.totalPoints,
+                totalDays: data.totalDays,
+                todayRank: data.todayRank,
+                checkinTime: data.checkinTime,
+                currentDate: data.currentDate,
+                quote: data.quote,
+                consecutiveDays: data.consecutiveDays || 0,
+            };
+            html = replaceTemplateVariables(customTemplate, templateData);
+        } else {
+            pluginState.logger.debug('使用默认 HTML 模板');
+            html = generateCheckinHtml(data);
+        }
+        
+        const result = await renderHtmlToImage(html);
+        
+        if (!result) {
+            return null;
+        }
+        
+        pluginState.logger.info(`Puppeteer 渲染成功，耗时 ${result.time}ms`);
         
         // 将 Base64 转换为 Buffer
-        const base64Data = result.data.replace(/^data:image\/\w+;base64,/, '');
+        const base64Data = result.image.replace(/^data:image\/\w+;base64,/, '');
         return Buffer.from(base64Data, 'base64');
         
     } catch (error) {
         pluginState.logger.error('调用 Puppeteer 失败:', error instanceof Error ? error.message : String(error));
+        return null;
+    }
+}
+
+/**
+ * 预览模板（用于 WebUI 编辑器）
+ */
+export async function previewTemplate(
+    template: string,
+    data: Record<string, string | number>
+): Promise<{ image: string; time: number } | null> {
+    try {
+        pluginState.logger.info('开始预览模板...');
+        
+        const html = replaceTemplateVariables(template, data);
+        const result = await renderHtmlToImage(html);
+        
+        if (result) {
+            pluginState.logger.info(`模板预览成功，耗时 ${result.time}ms`);
+        }
+        
+        return result;
+        
+    } catch (error) {
+        pluginState.logger.error('模板预览失败:', error instanceof Error ? error.message : String(error));
         return null;
     }
 }

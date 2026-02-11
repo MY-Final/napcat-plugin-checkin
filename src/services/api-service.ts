@@ -307,5 +307,36 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
+    // ==================== 模板预览（无鉴权）====================
+
+    /** 预览 HTML 模板 */
+    router.postNoAuth('/template/preview', async (req, res) => {
+        try {
+            const body = req.body as { template?: string; data?: Record<string, string | number> } | undefined;
+            
+            if (!body?.template) {
+                return res.status(400).json({ code: -1, message: '缺少 template 参数' });
+            }
+
+            const { previewTemplate } = await import('./puppeteer-service');
+            const result = await previewTemplate(body.template, body.data || {});
+            
+            if (!result) {
+                return res.status(500).json({ code: -1, message: '模板渲染失败' });
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    image: result.image,
+                    time: result.time,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('模板预览失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
     ctx.logger.debug('API 路由注册完成');
 }
