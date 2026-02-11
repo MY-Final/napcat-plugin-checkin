@@ -113,6 +113,17 @@ export default function ConfigPage() {
                         commands={config.checkinCommands || '签到'}
                         onChange={(commandsStr) => updateField('checkinCommands', commandsStr)}
                     />
+                    <SelectRow
+                        label="签到回复模式"
+                        desc="选择签到成功后的回复方式"
+                        value={config.checkinReplyMode || 'auto'}
+                        options={[
+                            { value: 'auto', label: '自动（有canvas用图片）' },
+                            { value: 'text', label: '文字模式' },
+                            { value: 'image', label: '图片模式' },
+                        ]}
+                        onChange={(v) => updateField('checkinReplyMode', v as 'text' | 'image' | 'auto')}
+                    />
                 </div>
             </div>
 
@@ -307,6 +318,26 @@ function CommandListRow({ label, desc, commands, onChange }: {
                     添加
                 </button>
             </div>
+        </div>
+    )
+}
+
+function SelectRow({ label, desc, value, options, onChange }: {
+    label: string; desc: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void
+}) {
+    return (
+        <div>
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">{label}</div>
+            <div className="text-xs text-gray-400 mb-2">{desc}</div>
+            <select
+                className="input-field"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            >
+                {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
         </div>
     )
 }

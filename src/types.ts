@@ -69,6 +69,8 @@ export interface PluginConfig {
     checkinCommands: string;
     /** 积分配置 */
     checkinPoints: CheckinPointsConfig;
+    /** 签到回复模式：text=文字, image=图片, auto=自动（有canvas用图片，否则文字） */
+    checkinReplyMode: 'text' | 'image' | 'auto';
 }
 
 /**

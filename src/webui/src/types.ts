@@ -22,6 +22,7 @@ export interface PluginConfig {
     enableCheckin: boolean
     checkinCommands: string  // 逗号分隔的命令列表
     checkinCommand?: string  // 向后兼容
+    checkinReplyMode: 'text' | 'image' | 'auto'
     checkinPoints: {
         minPoints: number
         maxPoints: number

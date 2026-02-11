@@ -106,38 +106,40 @@ export async function handleCheckinCommand(
             quote: getRandomQuote(),
         };
 
-        // 生成图片
-        const imageBuffer = await generateCheckinCard(cardData);
+        // 根据配置决定发送图片还是文字
+        const replyMode = pluginState.config.checkinReplyMode || 'auto';
+        let useImageMode = false;
 
-        if (imageBuffer) {
+        if (replyMode === 'image') {
+            useImageMode = true;
+        } else if (replyMode === 'auto') {
+            // auto 模式下，如果 canvas 可用则使用图片
+            const imageBuffer = await generateCheckinCard(cardData);
+            useImageMode = imageBuffer !== null;
+        }
+        // replyMode === 'text' 时 useImageMode 保持 false
+
+        if (useImageMode) {
             // 图片模式：发送图片卡片
-            const base64Image = imageBuffer.toString('base64');
-            const message: OB11PostSendMsg['message'] = [
-                {
-                    type: 'image',
-                    data: {
-                        file: `base64://${base64Image}`,
+            const imageBuffer = await generateCheckinCard(cardData);
+            if (imageBuffer) {
+                const base64Image = imageBuffer.toString('base64');
+                const message: OB11PostSendMsg['message'] = [
+                    {
+                        type: 'image',
+                        data: {
+                            file: `base64://${base64Image}`,
+                        },
                     },
-                },
-            ];
-            await sendReply(ctx, event, message);
+                ];
+                await sendReply(ctx, event, message);
+            } else {
+                // 图片生成失败，降级为文字
+                await sendTextCheckinResult(ctx, event, cardData, result.consecutiveDays);
+            }
         } else {
             // 文字模式：发送文字签到结果
-            const textMessage = [
-                `✅ 签到成功！`,
-                ``,
-                `👤 ${cardData.nickname}`,
-                `💎 +${cardData.earnedPoints} 积分`,
-                `📅 ${cardData.currentDate} ${cardData.checkinTime}`,
-                ``,
-                `📊 累计签到: ${cardData.totalDays} 天`,
-                `💰 累计积分: ${cardData.totalPoints}`,
-                `🏆 今日排名: #${cardData.todayRank}`,
-                `🔥 连续签到: ${result.consecutiveDays} 天`,
-                ``,
-                `"${cardData.quote}"`,
-            ].join('\n');
-            await sendReply(ctx, event, textMessage);
+            await sendTextCheckinResult(ctx, event, cardData, result.consecutiveDays);
         }
 
         // 设置CD
@@ -247,6 +249,32 @@ export async function handleCheckinQuery(
         pluginState.logger.error('处理查询命令失败:', error);
         await sendReply(ctx, event, '查询失败，请稍后重试~');
     }
+}
+
+/**
+ * 发送文字签到结果
+ */
+async function sendTextCheckinResult(
+    ctx: NapCatPluginContext,
+    event: OB11Message,
+    cardData: CheckinCardData,
+    consecutiveDays: number
+): Promise<void> {
+    const textMessage = [
+        `✅ 签到成功！`,
+        ``,
+        `👤 ${cardData.nickname}`,
+        `💎 +${cardData.earnedPoints} 积分`,
+        `📅 ${cardData.currentDate} ${cardData.checkinTime}`,
+        ``,
+        `📊 累计签到: ${cardData.totalDays} 天`,
+        `💰 累计积分: ${cardData.totalPoints}`,
+        `🏆 今日排名: #${cardData.todayRank}`,
+        `🔥 连续签到: ${consecutiveDays} 天`,
+        ``,
+        `"${cardData.quote}"`,
+    ].join('\n');
+    await sendReply(ctx, event, textMessage);
 }
 
 /**
