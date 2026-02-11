@@ -110,8 +110,8 @@ export default function ConfigPage() {
                     <CommandListRow
                         label="签到命令列表"
                         desc="触发签到的命令关键词，可添加多个"
-                        commands={config.checkinCommands || ['签到']}
-                        onChange={(commands) => updateField('checkinCommands', commands)}
+                        commands={config.checkinCommands || '签到'}
+                        onChange={(commandsStr) => updateField('checkinCommands', commandsStr)}
                     />
                 </div>
             </div>
@@ -246,20 +246,24 @@ function InputRow({ label, desc, value, type = 'text', onChange }: {
 }
 
 function CommandListRow({ label, desc, commands, onChange }: {
-    label: string; desc: string; commands: string[]; onChange: (commands: string[]) => void
+    label: string; desc: string; commands: string; onChange: (commands: string) => void
 }) {
     const [newCommand, setNewCommand] = useState('')
+    
+    // 解析命令列表
+    const commandList = commands.split(',').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0)
 
     const handleAdd = () => {
         const trimmed = newCommand.trim()
-        if (trimmed && !commands.includes(trimmed)) {
-            onChange([...commands, trimmed])
+        if (trimmed && !commandList.includes(trimmed)) {
+            onChange(commands ? `${commands},${trimmed}` : trimmed)
             setNewCommand('')
         }
     }
 
     const handleRemove = (cmd: string) => {
-        onChange(commands.filter(c => c !== cmd))
+        const newList = commandList.filter(c => c !== cmd)
+        onChange(newList.join(','))
     }
 
     return (
@@ -269,7 +273,7 @@ function CommandListRow({ label, desc, commands, onChange }: {
             
             {/* 命令列表 */}
             <div className="flex flex-wrap gap-2 mb-3">
-                {commands.map((cmd, index) => (
+                {commandList.map((cmd, index) => (
                     <div 
                         key={index} 
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 rounded-full text-sm"

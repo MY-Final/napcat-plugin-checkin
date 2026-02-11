@@ -20,7 +20,7 @@ export interface PluginConfig {
     groupConfigs?: Record<string, GroupConfig>
     // 签到配置
     enableCheckin: boolean
-    checkinCommands: string[]
+    checkinCommands: string  // 逗号分隔的命令列表
     checkinCommand?: string  // 向后兼容
     checkinPoints: {
         minPoints: number

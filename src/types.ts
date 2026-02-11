@@ -65,10 +65,24 @@ export interface PluginConfig {
     groupConfigs: Record<string, GroupConfig>;
     /** 是否启用签到功能 */
     enableCheckin: boolean;
-    /** 签到命令关键词列表（支持多个命令触发签到） */
-    checkinCommands: string[];
+    /** 签到命令关键词列表（支持多个命令触发签到，逗号分隔） */
+    checkinCommands: string;
     /** 积分配置 */
     checkinPoints: CheckinPointsConfig;
+}
+
+/**
+ * 获取签到命令列表（从逗号分隔的字符串解析）
+ */
+export function getCheckinCommands(config: { checkinCommands?: string; checkinCommand?: string }): string[] {
+    if (config.checkinCommands) {
+        return config.checkinCommands.split(',').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
+    }
+    // 向后兼容
+    if (config.checkinCommand) {
+        return [config.checkinCommand];
+    }
+    return ['签到'];
 }
 
 // ==================== API 响应 ====================

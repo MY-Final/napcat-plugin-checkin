@@ -11,6 +11,7 @@ import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
 import { handleCheckinCommand, handleCheckinAdmin, handleCheckinQuery } from './checkin-handler';
+import { getCheckinCommands } from '../types';
 
 // ==================== CD 冷却管理 ====================
 
@@ -154,7 +155,7 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
         }
 
         // 检查签到命令（无需前缀，支持多个命令）
-        const checkinCommands = pluginState.config.checkinCommands || [pluginState.config.checkinCommand || '签到'];
+        const checkinCommands = getCheckinCommands(pluginState.config);
         const trimmedMessage = rawMessage.trim();
         const isCheckinCommand = pluginState.config.enableCheckin && checkinCommands.includes(trimmedMessage);
         
@@ -185,7 +186,7 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 const isAdminUser = isAdmin(event);
                 
                 // 获取所有签到命令用于显示
-                const commands = pluginState.config.checkinCommands || [pluginState.config.checkinCommand || '签到'];
+                const commands = getCheckinCommands(pluginState.config);
                 const commandsText = commands.join(' / ');
                 
                 let helpText = [

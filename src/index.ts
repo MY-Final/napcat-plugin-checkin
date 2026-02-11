@@ -21,6 +21,7 @@ import { pluginState } from './core/state';
 import { handleMessage } from './handlers/message-handler';
 import { registerApiRoutes } from './services/api-service';
 import type { PluginConfig } from './types';
+import { getCheckinCommands } from './types';
 
 // ==================== 配置 UI Schema ====================
 
@@ -50,7 +51,7 @@ export const plugin_init: PluginModule['plugin_init'] = async (ctx) => {
         registerApiRoutes(ctx);
 
         ctx.logger.info('✅ 签到插件初始化完成');
-        const commands = pluginState.config.checkinCommands || [pluginState.config.checkinCommand || '签到'];
+        const commands = getCheckinCommands(pluginState.config);
         ctx.logger.info(`📝 签到命令: ${commands.join(', ')}`);
     } catch (error) {
         ctx.logger.error('❌ 插件初始化失败:', error);

@@ -14,7 +14,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
     cooldownSeconds: 60,
     groupConfigs: {},
     enableCheckin: true,
-    checkinCommands: ['签到', '打卡', 'sign', 'checkin'],
+    checkinCommands: '签到,打卡,sign,checkin',
     checkinPoints: {
         minPoints: 10,
         maxPoints: 50,
@@ -51,7 +51,7 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
         ctx.NapCatConfig.plainText(' '),
         ctx.NapCatConfig.plainText('📅 签到功能设置'),
         ctx.NapCatConfig.boolean('enableCheckin', '启用签到功能', true, '是否启用签到功能'),
-        ctx.NapCatConfig.array('checkinCommands', '签到命令列表', ['签到', '打卡', 'sign', 'checkin'], '触发签到的命令关键词列表，支持多个命令'),
+        ctx.NapCatConfig.text('checkinCommands', '签到命令列表', '签到,打卡,sign,checkin', '触发签到的命令关键词，多个命令用英文逗号分隔'),
 
         // 积分设置
         ctx.NapCatConfig.plainText(' '),
