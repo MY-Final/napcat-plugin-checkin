@@ -9,7 +9,8 @@ import type {
     CheckinResult, 
     DailyCheckinStats, 
     GroupCheckinStats, 
-    GroupUserInfo 
+    GroupUserInfo,
+    PointsBreakdown
 } from '../types';
 import { pluginState } from '../core/state';
 import { calculatePoints } from './points-calculator';
@@ -71,8 +72,11 @@ function saveGlobalUsersData(): void {
 function loadGroupUsersData(groupId: string): Map<string, GroupUserCheckinData> {
     if (!groupUsersCache.has(groupId)) {
         const fileName = getGroupDataFile(groupId);
-        const data = pluginState.loadDataFile<Record<string, GroupUserCheckinData>>(fileName, {});
-        groupUsersCache.set(groupId, new Map(Object.entries(data)));
+        const groupData = pluginState.loadDataFile<{
+            users?: Record<string, GroupUserCheckinData>;
+            dailyStats?: Record<string, DailyCheckinStats>;
+        }>(fileName, {});
+        groupUsersCache.set(groupId, new Map(Object.entries(groupData.users || {})));
     }
     return groupUsersCache.get(groupId)!;
 }
@@ -85,8 +89,13 @@ function saveGroupUsersData(groupId: string): void {
     if (!users) return;
     
     const fileName = getGroupDataFile(groupId);
-    const data = Object.fromEntries(users);
-    pluginState.saveDataFile(fileName, data);
+    const groupData = pluginState.loadDataFile<{
+        users?: Record<string, GroupUserCheckinData>;
+        dailyStats?: Record<string, DailyCheckinStats>;
+    }>(fileName, {});
+    
+    groupData.users = Object.fromEntries(users);
+    pluginState.saveDataFile(fileName, groupData);
 }
 
 /**
@@ -175,7 +184,10 @@ export async function performCheckin(
         const globalUsers = loadGlobalUsersData();
         let globalUserData = globalUsers.get(userId);
         
-        // 3. 计算连续签到天数（全局）
+        // 3. 检查今天是否已经在全局签到过
+        const hasCheckedInToday = globalUserData && globalUserData.lastCheckinDate === today;
+        
+        // 4. 计算连续签到天数（全局）
         let globalConsecutiveDays = 1;
         if (globalUserData && globalUserData.lastCheckinDate) {
             const yesterday = new Date();
@@ -184,14 +196,23 @@ export async function performCheckin(
             
             if (globalUserData.lastCheckinDate === yesterdayStr) {
                 globalConsecutiveDays = globalUserData.consecutiveDays + 1;
+            } else if (hasCheckedInToday) {
+                // 今天已经签到过，保持原有连续天数
+                globalConsecutiveDays = globalUserData.consecutiveDays;
             }
         }
         
-        // 4. 计算积分
-        const config = pluginState.config.checkinPoints;
-        const { totalPoints, breakdown } = calculatePoints(config, globalConsecutiveDays);
+        // 5. 计算积分（如果今天已经签到过，不重复给分）
+        let totalPoints = 0;
+        let breakdown: PointsBreakdown = { base: 0, consecutiveBonus: 0, weekendBonus: 0, specialDayBonus: 0 };
+        if (!hasCheckedInToday) {
+            const config = pluginState.config.checkinPoints;
+            const result = calculatePoints(config, globalConsecutiveDays);
+            totalPoints = result.totalPoints;
+            breakdown = result.breakdown;
+        }
         
-        // 5. 更新全局用户数据
+        // 6. 更新全局用户数据
         const isFirstTime = !globalUserData;
         if (!globalUserData) {
             globalUserData = {
@@ -206,34 +227,38 @@ export async function performCheckin(
         }
         
         globalUserData.nickname = nickname;
-        globalUserData.totalCheckinDays += 1;
-        globalUserData.consecutiveDays = globalConsecutiveDays;
-        globalUserData.totalPoints += totalPoints;
-        globalUserData.lastCheckinDate = today;
-        
-        // 添加到全局历史记录
-        const globalDailyStats = loadGroupDailyStats('global');
-        const globalRank = globalDailyStats.userIds.length + 1;
-        globalUserData.checkinHistory.push({
-            date: today,
-            points: totalPoints,
-            time: currentTime,
-            rank: globalRank,
-            groupId: groupId || undefined,
-        });
-        
-        // 限制历史记录长度
-        if (globalUserData.checkinHistory.length > 365) {
-            globalUserData.checkinHistory = globalUserData.checkinHistory.slice(-365);
+        // 只有今天没签到过才增加天数
+        if (!hasCheckedInToday) {
+            globalUserData.totalCheckinDays += 1;
+            globalUserData.totalPoints += totalPoints;
+            
+            // 添加到全局历史记录
+            const globalDailyStats = loadGroupDailyStats('global');
+            const globalRank = globalDailyStats.userIds.length + 1;
+            globalUserData.checkinHistory.push({
+                date: today,
+                points: totalPoints,
+                time: currentTime,
+                rank: globalRank,
+                groupId: groupId || undefined,
+            });
+            
+            // 限制历史记录长度
+            if (globalUserData.checkinHistory.length > 365) {
+                globalUserData.checkinHistory = globalUserData.checkinHistory.slice(-365);
+            }
+            
+            // 更新全局每日统计
+            globalDailyStats.totalCheckins += 1;
+            globalDailyStats.userIds.push(userId);
+            saveGroupDailyStats('global');
         }
+        
+        globalUserData.consecutiveDays = globalConsecutiveDays;
+        globalUserData.lastCheckinDate = today;
         
         globalUsers.set(userId, globalUserData);
         saveGlobalUsersData();
-        
-        // 更新全局每日统计
-        globalDailyStats.totalCheckins += 1;
-        globalDailyStats.userIds.push(userId);
-        saveGroupDailyStats('global');
         
         // 6. 如果指定了群，更新群内数据
         let groupRank = globalRank;

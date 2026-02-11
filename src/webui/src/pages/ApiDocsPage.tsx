@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { IconBook, IconTerminal } from '../components/icons'
 
 interface ApiEndpoint {
+  id: string
   method: 'GET' | 'POST'
   path: string
   title: string
@@ -20,6 +21,7 @@ interface ApiParam {
 
 const API_ENDPOINTS: ApiEndpoint[] = [
   {
+    id: 'status',
     method: 'GET',
     path: '/status',
     title: '获取插件状态',
@@ -39,6 +41,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'get-config',
     method: 'GET',
     path: '/config',
     title: '获取配置',
@@ -54,6 +57,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'post-config',
     method: 'POST',
     path: '/config',
     title: '保存配置',
@@ -70,6 +74,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'groups',
     method: 'GET',
     path: '/groups',
     title: '获取群列表',
@@ -87,6 +92,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'update-group-config',
     method: 'POST',
     path: '/groups/:id/config',
     title: '更新群配置',
@@ -100,6 +106,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'global-ranking',
     method: 'GET',
     path: '/checkin/ranking',
     title: '全服积分排行',
@@ -120,6 +127,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'group-ranking',
     method: 'GET',
     path: '/checkin/groups/:id/ranking',
     title: '群内积分排行',
@@ -140,6 +148,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'checkin-stats',
     method: 'GET',
     path: '/checkin/stats',
     title: '签到统计',
@@ -156,6 +165,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'user-data',
     method: 'GET',
     path: '/checkin/user/:id',
     title: '用户签到数据',
@@ -172,6 +182,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'group-stats',
     method: 'GET',
     path: '/checkin/groups/:id',
     title: '群签到统计',
@@ -187,6 +198,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'template-preview',
     method: 'POST',
     path: '/template/preview',
     title: '预览模板',
@@ -359,10 +371,10 @@ export default function ApiDocsPage() {
 
             {API_ENDPOINTS.slice(0, 3).map((endpoint) => (
               <button
-                key={endpoint.path}
-                onClick={() => setActiveSection(endpoint.path)}
+                key={endpoint.id}
+                onClick={() => setActiveSection(endpoint.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeSection === endpoint.path
+                  activeSection === endpoint.id
                     ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
@@ -382,10 +394,10 @@ export default function ApiDocsPage() {
 
             {API_ENDPOINTS.slice(3, 11).map((endpoint) => (
               <button
-                key={endpoint.path}
-                onClick={() => setActiveSection(endpoint.path)}
+                key={endpoint.id}
+                onClick={() => setActiveSection(endpoint.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeSection === endpoint.path
+                  activeSection === endpoint.id
                     ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
@@ -405,10 +417,10 @@ export default function ApiDocsPage() {
 
             {API_ENDPOINTS.slice(11).map((endpoint) => (
               <button
-                key={endpoint.path}
-                onClick={() => setActiveSection(endpoint.path)}
+                key={endpoint.id}
+                onClick={() => setActiveSection(endpoint.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeSection === endpoint.path
+                  activeSection === endpoint.id
                     ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
@@ -504,8 +516,8 @@ const result = await response.json();
             </>
           ) : (
             <>
-              {API_ENDPOINTS.filter(e => e.path === activeSection).map((endpoint) => (
-                <div key={endpoint.path}>
+              {API_ENDPOINTS.filter(e => e.id === activeSection).map((endpoint) => (
+                <div key={endpoint.id}>
                   <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                       <span className={`px-3 py-1 rounded text-sm font-medium ${
