@@ -10,7 +10,7 @@ import type { CheckinCardData } from '../types';
 const PUPPETEER_API = 'http://127.0.0.1:6099/plugin/napcat-plugin-puppeteer/api/render';
 
 /**
- * 生成签到卡片 HTML 模板
+ * 生成签到卡片 HTML 模板（使用 HTML/CSS，避免 Canvas 字体和跨域问题）
  */
 function generateCheckinHtml(data: CheckinCardData): string {
     return `<!DOCTYPE html>
@@ -20,13 +20,16 @@ function generateCheckinHtml(data: CheckinCardData): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>签到卡片</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            background: transparent;
-            font-family: -apple-system, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+            box-sizing: border-box;
         }
-        #card {
+        body {
+            background: transparent;
+            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+        }
+        .card {
             width: 600px;
             height: 380px;
             background: #ffffff;
@@ -35,163 +38,192 @@ function generateCheckinHtml(data: CheckinCardData): string {
             overflow: hidden;
             position: relative;
         }
+        .glow {
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 228, 233, 0.6) 0%, rgba(255, 255, 255, 0) 70%);
+            pointer-events: none;
+        }
+        .sidebar {
+            position: absolute;
+            left: 0;
+            top: 140px;
+            width: 5px;
+            height: 80px;
+            background: #fb7185;
+            border-radius: 0 3px 3px 0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            padding: 35px 40px 0 40px;
+            align-items: flex-start;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            background: #fecdd3;
+        }
+        .user-text {
+            display: flex;
+            flex-direction: column;
+        }
+        .nickname {
+            font-size: 20px;
+            font-weight: bold;
+            color: #18181b;
+            margin-bottom: 4px;
+        }
+        .qq {
+            font-size: 13px;
+            color: #71717a;
+        }
+        .rank {
+            text-align: right;
+        }
+        .rank-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #f43f5e;
+            font-style: italic;
+        }
+        .rank-label {
+            font-size: 11px;
+            color: #a1a1aa;
+            font-weight: 600;
+        }
+        .points-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .points {
+            font-size: 88px;
+            font-weight: bold;
+            background: linear-gradient(180deg, #f43f5e 0%, #be185d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+        .points-label {
+            font-size: 14px;
+            color: #fda4af;
+            font-weight: bold;
+            margin-top: 5px;
+            letter-spacing: 4px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 40px 0 40px;
+            padding: 15px 0;
+            background: #fff1f2;
+            border-radius: 20px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #e11d48;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4d1a2a;
+        }
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+        .date {
+            font-size: 12px;
+            color: #a1a1aa;
+            margin-bottom: 5px;
+        }
+        .quote {
+            font-size: 12px;
+            color: #d4d4d8;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-<div id="card">
-    <canvas id="checkInCanvas"></canvas>
+<div class="card">
+    <div class="glow"></div>
+    <div class="sidebar"></div>
+    
+    <div class="header">
+        <div class="user-info">
+            <img class="avatar" src="${data.avatarUrl}" alt="avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23fecdd3%22/></svg>'">
+            <div class="user-text">
+                <div class="nickname">${escapeHtml(data.nickname)}</div>
+                <div class="qq">QQ: ${data.userId}</div>
+            </div>
+        </div>
+        <div class="rank">
+            <div class="rank-number">#${data.todayRank}</div>
+            <div class="rank-label">TODAY RANK</div>
+        </div>
+    </div>
+    
+    <div class="points-section">
+        <div class="points">+${data.earnedPoints}</div>
+        <div class="points-label">POINTS EARNED</div>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-label">累计天数</div>
+            <div class="stat-value">${data.totalDays} 天</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">累计积分</div>
+            <div class="stat-value">${data.totalPoints} 分</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">签到时间</div>
+            <div class="stat-value">${data.checkinTime}</div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="date">${data.currentDate}</div>
+        <div class="quote">"${escapeHtml(data.quote)}"</div>
+    </div>
 </div>
-<script>
-    const canvas = document.getElementById('checkInCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    const config = { width: 600, height: 380, dpr: 2 };
-    canvas.width = config.width * config.dpr;
-    canvas.height = config.height * config.dpr;
-    canvas.style.width = config.width + 'px';
-    canvas.style.height = config.height + 'px';
-    ctx.scale(config.dpr, config.dpr);
-    
-    const userData = {
-        nickname: "${data.nickname}",
-        qq: "${data.userId}",
-        avatarUrl: "${data.avatarUrl}",
-        pointsEarned: ${data.earnedPoints},
-        totalPoints: ${data.totalPoints},
-        totalDays: ${data.totalDays},
-        rank: ${data.todayRank},
-        time: "${data.currentDate} ${data.checkinTime}",
-        quote: "${data.quote}"
-    };
-    
-    async function render() {
-        // 绘制底色
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, 600, 380);
-        
-        // 绘制粉色光晕装饰
-        const radialGrad = ctx.createRadialGradient(550, 50, 20, 500, 100, 300);
-        radialGrad.addColorStop(0, 'rgba(255, 241, 242, 1)');
-        radialGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = radialGrad;
-        ctx.fillRect(0, 0, 600, 380);
-        
-        // 绘制侧边高亮条
-        ctx.fillStyle = '#fb7185';
-        roundRect(0, 140, 5, 80, 3);
-        ctx.fill();
-        
-        // 绘制用户头像
-        try {
-            const avatar = await loadImg(userData.avatarUrl);
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.1)';
-            ctx.shadowBlur = 15;
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(70, 70, 30, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(70, 70, 28, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(avatar, 42, 42, 56, 56);
-            ctx.restore();
-        } catch (e) {
-            ctx.fillStyle = '#fecdd3';
-            ctx.beginPath();
-            ctx.arc(70, 70, 30, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // 绘制名字与QQ
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#18181b';
-        ctx.font = 'bold 20px "PingFang SC"';
-        ctx.fillText(userData.nickname, 115, 68);
-        ctx.fillStyle = '#71717a';
-        ctx.font = '500 13px "Arial"';
-        ctx.fillText('QQ: ' + userData.qq, 115, 88);
-        
-        // 绘制右侧排名
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#f43f5e';
-        ctx.font = 'italic bold 28px "Arial"';
-        ctx.fillText('#' + userData.rank, 560, 70);
-        ctx.fillStyle = '#a1a1aa';
-        ctx.font = '600 11px "PingFang SC"';
-        ctx.fillText('TODAY RANK', 560, 85);
-        
-        // 绘制中部积分
-        ctx.textAlign = 'center';
-        const textGrad = ctx.createLinearGradient(0, 140, 0, 210);
-        textGrad.addColorStop(0, '#f43f5e');
-        textGrad.addColorStop(1, '#be185d');
-        ctx.fillStyle = textGrad;
-        ctx.font = 'bold 88px "Arial Rounded MT Bold", "Arial"';
-        ctx.fillText('+' + userData.pointsEarned, 300, 205);
-        
-        ctx.fillStyle = '#fda4af';
-        ctx.font = 'bold 14px "PingFang SC"';
-        ctx.fillText('POINTS EARNED', 300, 235);
-        
-        // 绘制底部数据看板
-        const statsY = 295;
-        const col = 600 / 3;
-        
-        ctx.fillStyle = '#fff1f2';
-        roundRect(40, 265, 520, 65, 20);
-        ctx.fill();
-        
-        drawStatColumn('累计天数', userData.totalDays + ' 天', col * 0.5, statsY);
-        drawStatColumn('累计积分', userData.totalPoints + ' 分', col * 1.5, statsY);
-        drawStatColumn('签到时间', userData.time.split(' ')[1], col * 2.5, statsY);
-        
-        // 绘制页脚
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#a1a1aa';
-        ctx.font = '12px "PingFang SC"';
-        ctx.fillText(userData.time.split(' ')[0], 300, 352);
-        
-        ctx.fillStyle = '#d4d4d8';
-        ctx.font = 'italic 12px "PingFang SC"';
-        ctx.fillText('"' + userData.quote + '"', 300, 368);
-    }
-    
-    function drawStatColumn(label, value, x, y) {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#e11d48';
-        ctx.font = '600 12px "PingFang SC"';
-        ctx.fillText(label, x, y);
-        ctx.fillStyle = '#4d1a2a';
-        ctx.font = 'bold 20px "Arial"';
-        ctx.fillText(value, x, y + 24);
-    }
-    
-    function roundRect(x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.arcTo(x + w, y, x + w, y + h, r);
-        ctx.arcTo(x + w, y + h, x, y + h, r);
-        ctx.arcTo(x, y + h, x, y, r);
-        ctx.arcTo(x, y, x + w, y, r);
-        ctx.closePath();
-    }
-    
-    function loadImg(url) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error('Avatar load error'));
-            img.src = url;
-        });
-    }
-    
-    render();
-</script>
 </body>
 </html>`;
+}
+
+/**
+ * 转义 HTML 特殊字符
+ */
+function escapeHtml(text: string): string {
+    const div = { replace: (s: string) => s };
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 /**
@@ -254,7 +286,6 @@ export async function checkPuppeteerAvailable(): Promise<boolean> {
     try {
         const response = await fetch(PUPPETEER_API.replace('/render', '/status'), {
             method: 'GET',
-            timeout: 5000,
         });
         return response.ok;
     } catch {
