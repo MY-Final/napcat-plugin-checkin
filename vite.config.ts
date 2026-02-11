@@ -14,9 +14,8 @@ const nodeModules = [
     ...builtinModules.map((m) => `node:${m}`),
 ].flat();
 
-// 依赖排除 - canvas 和 axios 作为外部依赖（可选）
-// 如果目标机器安装了这些模块，会生成图片；否则会使用文字模式
-const external: string[] = ['canvas', 'axios'];
+// 依赖排除 - 不将 canvas 和 axios 设为外部依赖，打包进产物
+const external: string[] = [];
 
 /**
  * 递归复制目录
