@@ -6,7 +6,17 @@
 import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
-import { performCheckin, getUserCheckinData } from '../services/checkin-service';
+import { 
+    performCheckin, 
+    getUserCheckinData, 
+    getGroupUserCheckinData,
+    getAllUsersData,
+    getGroupAllUsersData,
+    getTodayCheckinCount,
+    getGroupTodayCheckinCount,
+    getUserTodayRank,
+    getUserGroupTodayRank
+} from '../services/checkin-service';
 import { renderCheckinCard, getAvatarUrl } from '../services/puppeteer-service';
 import { getRandomQuote } from '../utils/checkin-messages';
 import { sendReply } from './message-handler';
@@ -167,33 +177,39 @@ export async function handleCheckinQuery(
         const userId = String(event.user_id);
         const groupId = event.group_id;
         
-        // 获取所有用户数据
-        const { getAllUsersData, getTodayCheckinCount, getTodayRank } = await import('../services/checkin-service');
-        const allUsers = getAllUsersData();
-        
         if (type === 'self') {
-            // 查询个人数据
-            const userData = getUserCheckinData(userId);
-            if (!userData) {
+            // 查询个人数据（优先显示群内数据，如果没有则显示全局）
+            let userData = groupId ? getGroupUserCheckinData(userId, String(groupId)) : null;
+            const globalData = getUserCheckinData(userId);
+            
+            if (!userData && !globalData) {
                 await sendReply(ctx, event, '你还没有签到记录哦~发送"签到"开始你的第一次签到！');
                 return;
             }
             
-            const todayCount = getTodayCheckinCount();
+            // 如果有群内数据，优先显示群内统计
+            const displayData = userData || globalData!;
+            const isGroupData = !!userData;
+            
+            const todayCount = groupId 
+                ? getGroupTodayCheckinCount(String(groupId))
+                : getTodayCheckinCount();
+                
             const text = [
-                `📊 ${userData.nickname} 的签到数据`,
+                `📊 ${displayData.nickname} 的签到数据`,
+                isGroupData ? `👥 当前群内统计` : `🌍 全服统计`,
                 ``,
-                `💰 累计积分: ${userData.totalPoints}`,
-                `📅 累计签到: ${userData.totalCheckinDays} 天`,
-                `🔥 连续签到: ${userData.consecutiveDays} 天`,
+                `💰 ${isGroupData ? '群内' : '累计'}积分: ${displayData.totalPoints}`,
+                `📅 ${isGroupData ? '群内' : '累计'}签到: ${displayData.totalCheckinDays} 天`,
+                `🔥 连续签到: ${displayData.consecutiveDays} 天`,
                 ``,
                 `📈 今日已有 ${todayCount} 人签到`,
             ];
             
             // 显示最近3次签到记录
-            if (userData.checkinHistory.length > 0) {
+            if (displayData.checkinHistory.length > 0) {
                 text.push(``, `📝 最近签到:`);
-                const recentHistory = userData.checkinHistory.slice(-3).reverse();
+                const recentHistory = displayData.checkinHistory.slice(-3).reverse();
                 recentHistory.forEach(record => {
                     text.push(`   ${record.date} +${record.points}分 #${record.rank}`);
                 });
@@ -202,9 +218,15 @@ export async function handleCheckinQuery(
             await sendReply(ctx, event, text.join('\n'));
             
         } else if (type === 'group' && groupId) {
-            // 群内排行 - 显示该群中签到过的用户
-            // 注意：这里简化处理，显示全服排行中在该群的用户
-            const sortedUsers = Array.from(allUsers.values())
+            // 群内排行 - 从群数据文件中读取
+            const groupUsers = getGroupAllUsersData(String(groupId));
+            
+            if (groupUsers.size === 0) {
+                await sendReply(ctx, event, '群内还没有人签到哦~快来成为第一个！');
+                return;
+            }
+            
+            const sortedUsers = Array.from(groupUsers.values())
                 .sort((a, b) => b.totalPoints - a.totalPoints)
                 .slice(0, 10);
             
@@ -213,7 +235,7 @@ export async function handleCheckinQuery(
                 ``,
                 ...sortedUsers.map((user, index) => {
                     const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
-                    return `${medal} ${user.nickname}`;
+                    return `${medal} ${user.nickname} - ${user.totalPoints}分 (${user.totalCheckinDays}天)`;
                 }),
                 ``,
                 `💡 使用 "${pluginState.config.commandPrefix}我的积分" 查看个人详情`,
@@ -223,6 +245,7 @@ export async function handleCheckinQuery(
             
         } else if (type === 'global') {
             // 全服排行
+            const allUsers = getAllUsersData();
             const sortedUsers = Array.from(allUsers.values())
                 .sort((a, b) => b.totalPoints - a.totalPoints)
                 .slice(0, 10);

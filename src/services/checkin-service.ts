@@ -1,19 +1,28 @@
 /**
- * 签到服务
- * 处理签到逻辑、数据持久化和排名计算
+ * 重构后的签到服务
+ * 支持分群签到，每个群独立统计
  */
 
-import type { UserCheckinData, CheckinResult, DailyCheckinStats, PluginConfig, GroupCheckinStats, GroupUserInfo } from '../types';
+import type { 
+    UserCheckinData, 
+    GroupUserCheckinData, 
+    CheckinResult, 
+    DailyCheckinStats, 
+    GroupCheckinStats, 
+    GroupUserInfo 
+} from '../types';
 import { pluginState } from '../core/state';
 import { calculatePoints } from './points-calculator';
 
 // 数据文件路径
-const USERS_DATA_FILE = 'checkin-users.json';
-const DAILY_STATS_FILE = 'checkin-daily.json';
+const USERS_DATA_FILE = 'checkin-users.json';           // 全局用户数据（全服排行）
+const DAILY_STATS_FILE = 'checkin-daily.json';          // 每日统计数据
+const GROUP_DATA_PREFIX = 'checkin-group-';             // 群数据文件前缀
 
 // 内存缓存
 let usersCache: Map<string, UserCheckinData> = new Map();
-let dailyStatsCache: DailyCheckinStats | null = null;
+let dailyStatsCache: Map<string, DailyCheckinStats> = new Map();  // 按群存储今日统计
+let groupUsersCache: Map<string, Map<string, GroupUserCheckinData>> = new Map(); // 群用户缓存
 
 /**
  * 获取今天的日期字符串 YYYY-MM-DD
@@ -31,39 +40,16 @@ function getCurrentTimeStr(): string {
 }
 
 /**
- * 计算连续签到天数
+ * 获取群数据文件路径
  */
-function calculateConsecutiveDays(lastCheckinDate: string): number {
-    if (!lastCheckinDate) return 0;
-
-    const today = new Date();
-    const lastDate = new Date(lastCheckinDate);
-
-    // 检查今天是否已经签到
-    if (lastCheckinDate === getTodayStr()) {
-        return -1; // 表示今天已经签到
-    }
-
-    // 检查昨天是否签到
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    if (lastCheckinDate === yesterdayStr) {
-        // 昨天签到了，连续签到+1
-        return 1; // 返回的是需要增加的天数
-    } else if (lastCheckinDate < yesterdayStr) {
-        // 断签了，重新开始
-        return 0;
-    }
-
-    return 0;
+function getGroupDataFile(groupId: string): string {
+    return `${GROUP_DATA_PREFIX}${groupId}.json`;
 }
 
 /**
- * 加载用户数据
+ * 加载全局用户数据（用于全服排行）
  */
-function loadUsersData(): Map<string, UserCheckinData> {
+function loadGlobalUsersData(): Map<string, UserCheckinData> {
     if (usersCache.size === 0) {
         const data = pluginState.loadDataFile<Record<string, UserCheckinData>>(USERS_DATA_FILE, {});
         usersCache = new Map(Object.entries(data));
@@ -72,44 +58,90 @@ function loadUsersData(): Map<string, UserCheckinData> {
 }
 
 /**
- * 保存用户数据
+ * 保存全局用户数据
  */
-function saveUsersData(): void {
+function saveGlobalUsersData(): void {
     const data = Object.fromEntries(usersCache);
     pluginState.saveDataFile(USERS_DATA_FILE, data);
 }
 
 /**
- * 加载今日统计数据
+ * 加载群内用户数据
  */
-export function loadDailyStats(): DailyCheckinStats {
-    const today = getTodayStr();
+function loadGroupUsersData(groupId: string): Map<string, GroupUserCheckinData> {
+    if (!groupUsersCache.has(groupId)) {
+        const fileName = getGroupDataFile(groupId);
+        const data = pluginState.loadDataFile<Record<string, GroupUserCheckinData>>(fileName, {});
+        groupUsersCache.set(groupId, new Map(Object.entries(data)));
+    }
+    return groupUsersCache.get(groupId)!;
+}
 
-    if (!dailyStatsCache || dailyStatsCache.date !== today) {
-        const allStats = pluginState.loadDataFile<Record<string, DailyCheckinStats>>(DAILY_STATS_FILE, {});
-        dailyStatsCache = allStats[today] || {
+/**
+ * 保存群内用户数据
+ */
+function saveGroupUsersData(groupId: string): void {
+    const users = groupUsersCache.get(groupId);
+    if (!users) return;
+    
+    const fileName = getGroupDataFile(groupId);
+    const data = Object.fromEntries(users);
+    pluginState.saveDataFile(fileName, data);
+}
+
+/**
+ * 加载今日统计数据（按群）
+ */
+function loadGroupDailyStats(groupId: string): DailyCheckinStats {
+    const today = getTodayStr();
+    const cacheKey = `${groupId}-${today}`;
+    
+    if (!dailyStatsCache.has(cacheKey)) {
+        const fileName = getGroupDataFile(groupId);
+        // 从群数据文件中读取今日统计
+        const groupData = pluginState.loadDataFile<{
+            users?: Record<string, GroupUserCheckinData>;
+            dailyStats?: Record<string, DailyCheckinStats>;
+        }>(fileName, {});
+        
+        const todayStats = groupData.dailyStats?.[today] || {
             date: today,
             totalCheckins: 0,
             userIds: [],
         };
+        
+        dailyStatsCache.set(cacheKey, todayStats);
     }
-
-    return dailyStatsCache;
+    
+    return dailyStatsCache.get(cacheKey)!;
 }
 
 /**
- * 保存今日统计数据
+ * 保存今日统计数据（按群）
  */
-function saveDailyStats(): void {
-    if (!dailyStatsCache) return;
-
-    const allStats = pluginState.loadDataFile<Record<string, DailyCheckinStats>>(DAILY_STATS_FILE, {});
-    allStats[dailyStatsCache.date] = dailyStatsCache;
-    pluginState.saveDataFile(DAILY_STATS_FILE, allStats);
+function saveGroupDailyStats(groupId: string): void {
+    const today = getTodayStr();
+    const cacheKey = `${groupId}-${today}`;
+    const stats = dailyStatsCache.get(cacheKey);
+    
+    if (!stats) return;
+    
+    const fileName = getGroupDataFile(groupId);
+    const groupData = pluginState.loadDataFile<{
+        users?: Record<string, GroupUserCheckinData>;
+        dailyStats?: Record<string, DailyCheckinStats>;
+    }>(fileName, {});
+    
+    if (!groupData.dailyStats) {
+        groupData.dailyStats = {};
+    }
+    
+    groupData.dailyStats[today] = stats;
+    pluginState.saveDataFile(fileName, groupData);
 }
 
 /**
- * 执行签到
+ * 执行签到（支持分群）
  */
 export async function performCheckin(
     userId: string,
@@ -118,45 +150,51 @@ export async function performCheckin(
 ): Promise<CheckinResult> {
     try {
         const today = getTodayStr();
-        const users = loadUsersData();
-        const dailyStats = loadDailyStats();
-
-        // 检查今天是否已经签到
-        let userData = users.get(userId);
-        if (userData && userData.lastCheckinDate === today) {
-            return {
-                success: false,
-                isFirstTime: false,
-                userData,
-                earnedPoints: 0,
-                todayRank: 0,
-                checkinTime: getCurrentTimeStr(),
-                consecutiveDays: userData.consecutiveDays,
-                error: '今天已经签到过了，明天再来吧~',
-            };
-        }
-
-        // 计算连续签到
-        let consecutiveDays = 1;
-        if (userData) {
-            const lastDate = new Date(userData.lastCheckinDate);
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
+        const currentTime = getCurrentTimeStr();
+        
+        // 1. 检查群内是否已经签到（如果指定了群）
+        if (groupId) {
+            const groupUsers = loadGroupUsersData(groupId);
+            const groupUserData = groupUsers.get(userId);
             
-            if (userData.lastCheckinDate === yesterday.toISOString().split('T')[0]) {
-                // 昨天签到了，连续天数+1
-                consecutiveDays = userData.consecutiveDays + 1;
+            if (groupUserData && groupUserData.lastCheckinDate === today) {
+                return {
+                    success: false,
+                    isFirstTime: false,
+                    userData: loadGlobalUsersData().get(userId)!,
+                    earnedPoints: 0,
+                    todayRank: 0,
+                    checkinTime: currentTime,
+                    consecutiveDays: groupUserData.consecutiveDays,
+                    error: '今天已经在这个群签到过了，明天再来吧~',
+                };
             }
         }
-
-        // 计算积分
+        
+        // 2. 加载全局数据（全服排行用）
+        const globalUsers = loadGlobalUsersData();
+        let globalUserData = globalUsers.get(userId);
+        
+        // 3. 计算连续签到天数（全局）
+        let globalConsecutiveDays = 1;
+        if (globalUserData && globalUserData.lastCheckinDate) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            if (globalUserData.lastCheckinDate === yesterdayStr) {
+                globalConsecutiveDays = globalUserData.consecutiveDays + 1;
+            }
+        }
+        
+        // 4. 计算积分
         const config = pluginState.config.checkinPoints;
-        const { totalPoints, breakdown } = calculatePoints(config, consecutiveDays);
-
-        // 更新或创建用户数据
-        const isFirstTime = !userData;
-        if (!userData) {
-            userData = {
+        const { totalPoints, breakdown } = calculatePoints(config, globalConsecutiveDays);
+        
+        // 5. 更新全局用户数据
+        const isFirstTime = !globalUserData;
+        if (!globalUserData) {
+            globalUserData = {
                 userId,
                 nickname,
                 totalCheckinDays: 0,
@@ -166,216 +204,260 @@ export async function performCheckin(
                 checkinHistory: [],
             };
         }
-
-        // 更新用户信息
-        userData.nickname = nickname;
-        userData.totalCheckinDays += 1;
-        userData.consecutiveDays = consecutiveDays;
-        userData.totalPoints += totalPoints;
-        userData.lastCheckinDate = today;
         
-        // 添加到历史记录
-        const todayRank = dailyStats.userIds.length + 1;
-        userData.checkinHistory.push({
+        globalUserData.nickname = nickname;
+        globalUserData.totalCheckinDays += 1;
+        globalUserData.consecutiveDays = globalConsecutiveDays;
+        globalUserData.totalPoints += totalPoints;
+        globalUserData.lastCheckinDate = today;
+        
+        // 添加到全局历史记录
+        const globalDailyStats = loadGroupDailyStats('global');
+        const globalRank = globalDailyStats.userIds.length + 1;
+        globalUserData.checkinHistory.push({
             date: today,
             points: totalPoints,
-            time: getCurrentTimeStr(),
-            rank: todayRank,
+            time: currentTime,
+            rank: globalRank,
             groupId: groupId || undefined,
         });
-
-        // 限制历史记录长度（保留最近365天）
-        if (userData.checkinHistory.length > 365) {
-            userData.checkinHistory = userData.checkinHistory.slice(-365);
+        
+        // 限制历史记录长度
+        if (globalUserData.checkinHistory.length > 365) {
+            globalUserData.checkinHistory = globalUserData.checkinHistory.slice(-365);
         }
-
-        // 保存用户数据
-        users.set(userId, userData);
-        saveUsersData();
-
-        // 更新每日统计
-        dailyStats.totalCheckins += 1;
-        dailyStats.userIds.push(userId);
-        saveDailyStats();
-
-        pluginState.logger.debug(
-            `用户 ${nickname}(${userId}) 签到成功，获得 ${totalPoints} 积分，排名 #${todayRank}`
-        );
-
+        
+        globalUsers.set(userId, globalUserData);
+        saveGlobalUsersData();
+        
+        // 更新全局每日统计
+        globalDailyStats.totalCheckins += 1;
+        globalDailyStats.userIds.push(userId);
+        saveGroupDailyStats('global');
+        
+        // 6. 如果指定了群，更新群内数据
+        let groupRank = globalRank;
+        if (groupId) {
+            const groupUsers = loadGroupUsersData(groupId);
+            let groupUserData = groupUsers.get(userId);
+            
+            // 计算群内连续签到
+            let groupConsecutiveDays = 1;
+            if (groupUserData && groupUserData.lastCheckinDate) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().split('T')[0];
+                
+                if (groupUserData.lastCheckinDate === yesterdayStr) {
+                    groupConsecutiveDays = groupUserData.consecutiveDays + 1;
+                }
+            }
+            
+            if (!groupUserData) {
+                groupUserData = {
+                    userId,
+                    nickname,
+                    totalCheckinDays: 0,
+                    consecutiveDays: 0,
+                    totalPoints: 0,
+                    lastCheckinDate: '',
+                    checkinHistory: [],
+                };
+            }
+            
+            groupUserData.nickname = nickname;
+            groupUserData.totalCheckinDays += 1;
+            groupUserData.consecutiveDays = groupConsecutiveDays;
+            groupUserData.totalPoints += totalPoints;
+            groupUserData.lastCheckinDate = today;
+            
+            // 群内排名
+            const groupDailyStats = loadGroupDailyStats(groupId);
+            groupRank = groupDailyStats.userIds.length + 1;
+            
+            groupUserData.checkinHistory.push({
+                date: today,
+                points: totalPoints,
+                time: currentTime,
+                rank: groupRank,
+                groupId,
+            });
+            
+            // 限制历史记录长度
+            if (groupUserData.checkinHistory.length > 365) {
+                groupUserData.checkinHistory = groupUserData.checkinHistory.slice(-365);
+            }
+            
+            groupUsers.set(userId, groupUserData);
+            saveGroupUsersData(groupId);
+            
+            // 更新群内每日统计
+            groupDailyStats.totalCheckins += 1;
+            groupDailyStats.userIds.push(userId);
+            saveGroupDailyStats(groupId);
+        }
+        
         return {
             success: true,
             isFirstTime,
-            userData,
+            userData: globalUserData,
             earnedPoints: totalPoints,
-            todayRank,
-            checkinTime: getCurrentTimeStr(),
-            consecutiveDays,
+            todayRank: groupRank,
+            checkinTime: currentTime,
+            consecutiveDays: globalConsecutiveDays,
+            breakdown,
         };
+        
     } catch (error) {
-        pluginState.logger.error('签到失败:', error);
-        return {
-            success: false,
-            isFirstTime: false,
-            userData: {} as UserCheckinData,
-            earnedPoints: 0,
-            todayRank: 0,
-            checkinTime: getCurrentTimeStr(),
-            consecutiveDays: 0,
-            error: '签到处理失败，请稍后重试',
-        };
+        pluginState.logger.error('执行签到失败:', error);
+        throw error;
     }
 }
 
 /**
- * 获取用户签到数据
+ * 获取全局用户签到数据
  */
-export function getUserCheckinData(userId: string): UserCheckinData | null {
-    const users = loadUsersData();
-    return users.get(userId) || null;
+export function getUserCheckinData(userId: string): UserCheckinData | undefined {
+    return loadGlobalUsersData().get(userId);
 }
 
 /**
- * 获取今日签到排名
+ * 获取群内用户签到数据
  */
-export function getTodayRank(userId: string): number {
-    const dailyStats = loadDailyStats();
-    const index = dailyStats.userIds.indexOf(userId);
-    return index >= 0 ? index + 1 : dailyStats.userIds.length + 1;
+export function getGroupUserCheckinData(userId: string, groupId: string): GroupUserCheckinData | undefined {
+    return loadGroupUsersData(groupId).get(userId);
 }
 
 /**
- * 获取今日签到人数
- */
-export function getTodayCheckinCount(): number {
-    const dailyStats = loadDailyStats();
-    return dailyStats.totalCheckins;
-}
-
-/**
- * 获取所有用户数据
+ * 获取所有全局用户数据（用于全服排行）
  */
 export function getAllUsersData(): Map<string, UserCheckinData> {
-    return loadUsersData();
+    return loadGlobalUsersData();
 }
 
 /**
- * 获取群的签到统计数据
+ * 获取所有群内用户数据（用于群内排行）
+ */
+export function getGroupAllUsersData(groupId: string): Map<string, GroupUserCheckinData> {
+    return loadGroupUsersData(groupId);
+}
+
+/**
+ * 获取今日签到数（全局）
+ */
+export function getTodayCheckinCount(): number {
+    const stats = loadGroupDailyStats('global');
+    return stats.totalCheckins;
+}
+
+/**
+ * 获取群内今日签到数
+ */
+export function getGroupTodayCheckinCount(groupId: string): number {
+    const stats = loadGroupDailyStats(groupId);
+    return stats.totalCheckins;
+}
+
+/**
+ * 获取用户今日排名（全局）
+ */
+export function getUserTodayRank(userId: string): number {
+    const stats = loadGroupDailyStats('global');
+    return stats.userIds.indexOf(userId) + 1;
+}
+
+/**
+ * 获取用户群内今日排名
+ */
+export function getUserGroupTodayRank(userId: string, groupId: string): number {
+    const stats = loadGroupDailyStats(groupId);
+    return stats.userIds.indexOf(userId) + 1;
+}
+
+/**
+ * 获取今日排名列表（全局）
+ */
+export function getTodayRanking(limit: number = 10): { userId: string; rank: number }[] {
+    const stats = loadGroupDailyStats('global');
+    return stats.userIds.slice(0, limit).map((userId, index) => ({
+        userId,
+        rank: index + 1,
+    }));
+}
+
+/**
+ * 获取群内今日排名列表
+ */
+export function getGroupTodayRanking(groupId: string, limit: number = 10): { userId: string; rank: number }[] {
+    const stats = loadGroupDailyStats(groupId);
+    return stats.userIds.slice(0, limit).map((userId, index) => ({
+        userId,
+        rank: index + 1,
+    }));
+}
+
+/**
+ * 清理旧数据
+ */
+export function cleanupOldData(daysToKeep: number = 90): void {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    
+    // 清理全局数据
+    const globalUsers = loadGlobalUsersData();
+    for (const [userId, userData] of globalUsers) {
+        userData.checkinHistory = userData.checkinHistory.filter(
+            record => record.date >= cutoffStr
+        );
+    }
+    saveGlobalUsersData();
+    
+    pluginState.logger.info(`已清理 ${daysToKeep} 天前的历史数据`);
+}
+
+/**
+ * 获取群签到统计数据
  */
 export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
-    const allUsers = loadUsersData();
+    const groupUsers = loadGroupUsersData(groupId);
     const today = getTodayStr();
+    const todayStats = loadGroupDailyStats(groupId);
     
-    const groupUsers: GroupUserInfo[] = [];
     let totalPoints = 0;
     let todayCheckins = 0;
+    const users: GroupUserInfo[] = [];
     
-    for (const user of allUsers.values()) {
-        // 检查用户是否在该群签到过
-        const groupCheckins = user.checkinHistory.filter(record => record.groupId === groupId);
+    for (const [userId, userData] of groupUsers) {
+        totalPoints += userData.totalPoints;
         
-        if (groupCheckins.length > 0) {
-            const groupPointSum = groupCheckins.reduce((sum, record) => sum + record.points, 0);
-            const lastCheckin = groupCheckins[groupCheckins.length - 1];
-            
-            groupUsers.push({
-                userId: user.userId,
-                nickname: user.nickname,
-                groupPoints: groupPointSum,
-                groupCheckinDays: groupCheckins.length,
-                lastCheckinDate: lastCheckin.date,
-            });
-            
-            totalPoints += groupPointSum;
-            
-            // 统计今日签到
-            if (lastCheckin.date === today) {
-                todayCheckins++;
-            }
+        if (userData.lastCheckinDate === today) {
+            todayCheckins++;
         }
+        
+        users.push({
+            userId,
+            nickname: userData.nickname,
+            groupPoints: userData.totalPoints,
+            groupCheckinDays: userData.totalCheckinDays,
+            lastCheckinDate: userData.lastCheckinDate,
+        });
     }
-    
-    // 按群内积分排序
-    groupUsers.sort((a, b) => b.groupPoints - a.groupPoints);
     
     return {
         groupId,
-        totalCheckins: groupUsers.length,
+        totalCheckins: groupUsers.size,
         totalPoints,
         todayCheckins,
-        users: groupUsers,
+        users,
     };
 }
 
 /**
- * 获取所有群的签到统计
+ * 获取所有群统计数据
  */
 export function getAllGroupsStats(): GroupCheckinStats[] {
-    const allUsers = loadUsersData();
-    const groupMap = new Map<string, GroupCheckinStats>();
-    const today = getTodayStr();
-    
-    for (const user of allUsers.values()) {
-        for (const record of user.checkinHistory) {
-            if (record.groupId) {
-                if (!groupMap.has(record.groupId)) {
-                    groupMap.set(record.groupId, {
-                        groupId: record.groupId,
-                        totalCheckins: 0,
-                        totalPoints: 0,
-                        todayCheckins: 0,
-                        users: [],
-                    });
-                }
-                
-                const stats = groupMap.get(record.groupId)!;
-                
-                // 查找用户是否已在列表中
-                const existingUser = stats.users.find(u => u.userId === user.userId);
-                if (existingUser) {
-                    existingUser.groupPoints += record.points;
-                    existingUser.groupCheckinDays += 1;
-                    if (record.date > existingUser.lastCheckinDate) {
-                        existingUser.lastCheckinDate = record.date;
-                    }
-                } else {
-                    stats.users.push({
-                        userId: user.userId,
-                        nickname: user.nickname,
-                        groupPoints: record.points,
-                        groupCheckinDays: 1,
-                        lastCheckinDate: record.date,
-                    });
-                    stats.totalCheckins++;
-                }
-                
-                stats.totalPoints += record.points;
-                if (record.date === today) {
-                    stats.todayCheckins++;
-                }
-            }
-        }
-    }
-    
-    return Array.from(groupMap.values());
-}
-
-/**
- * 清理旧数据（保留最近90天的统计数据）
- */
-export function cleanupOldData(daysToKeep: number = 90): void {
-    const allStats = pluginState.loadDataFile<Record<string, DailyCheckinStats>>(DAILY_STATS_FILE, {});
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
-
-    let cleanedCount = 0;
-    for (const date in allStats) {
-        if (date < cutoffStr) {
-            delete allStats[date];
-            cleanedCount++;
-        }
-    }
-
-    pluginState.saveDataFile(DAILY_STATS_FILE, allStats);
-    pluginState.logger.info(`清理了 ${cleanedCount} 天的旧签到统计数据`);
+    // 这里需要扫描数据目录获取所有群文件
+    // 暂时返回空数组，后续可以实现文件扫描
+    return [];
 }

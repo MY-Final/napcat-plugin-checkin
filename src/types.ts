@@ -106,22 +106,42 @@ export interface ApiResponse<T = unknown> {
 // ==================== 签到数据 ====================
 
 /**
- * 用户签到数据
+ * 用户签到数据（全局）
  */
 export interface UserCheckinData {
     /** 用户QQ号 */
     userId: string;
     /** 用户昵称 */
     nickname: string;
-    /** 累计签到天数 */
+    /** 累计签到天数（全服） */
     totalCheckinDays: number;
-    /** 连续签到天数 */
+    /** 连续签到天数（全服） */
     consecutiveDays: number;
-    /** 总积分 */
+    /** 总积分（全服） */
     totalPoints: number;
-    /** 最后签到日期 YYYY-MM-DD */
+    /** 最后签到日期 YYYY-MM-DD（全服） */
     lastCheckinDate: string;
     /** 签到历史记录 */
+    checkinHistory: CheckinRecord[];
+}
+
+/**
+ * 群内用户签到数据
+ */
+export interface GroupUserCheckinData {
+    /** 用户QQ号 */
+    userId: string;
+    /** 用户昵称 */
+    nickname: string;
+    /** 群内累计签到天数 */
+    totalCheckinDays: number;
+    /** 群内连续签到天数 */
+    consecutiveDays: number;
+    /** 群内总积分 */
+    totalPoints: number;
+    /** 群内最后签到日期 YYYY-MM-DD */
+    lastCheckinDate: string;
+    /** 群内签到历史记录 */
     checkinHistory: CheckinRecord[];
 }
 
@@ -188,6 +208,20 @@ export interface DailyCheckinStats {
 }
 
 /**
+ * 积分明细
+ */
+export interface PointsBreakdown {
+    /** 基础积分 */
+    base: number;
+    /** 连续签到加成 */
+    consecutiveBonus: number;
+    /** 周末加成 */
+    weekendBonus: number;
+    /** 特殊日期加成 */
+    specialDayBonus: number;
+}
+
+/**
  * 签到结果
  */
 export interface CheckinResult {
@@ -195,16 +229,18 @@ export interface CheckinResult {
     success: boolean;
     /** 是否首次签到 */
     isFirstTime: boolean;
-    /** 用户数据 */
+    /** 用户数据（全局） */
     userData: UserCheckinData;
     /** 本次获得积分 */
     earnedPoints: number;
-    /** 今日排名 */
+    /** 今日排名（群内或全局） */
     todayRank: number;
     /** 签到时间 */
     checkinTime: string;
-    /** 连续签到天数 */
+    /** 连续签到天数（全局） */
     consecutiveDays: number;
+    /** 积分明细 */
+    breakdown?: PointsBreakdown;
     /** 错误信息 */
     error?: string;
 }

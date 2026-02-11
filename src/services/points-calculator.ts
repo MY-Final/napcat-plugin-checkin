@@ -3,7 +3,7 @@
  * 负责计算用户签到应获得的积分
  */
 
-import type { CheckinPointsConfig } from '../types';
+import type { CheckinPointsConfig, PointsBreakdown } from '../types';
 
 /**
  * 计算本次签到获得的积分
@@ -14,14 +14,19 @@ import type { CheckinPointsConfig } from '../types';
 export function calculatePoints(
     config: CheckinPointsConfig,
     consecutiveDays: number
-): { basePoints: number; bonusPoints: number; totalPoints: number; breakdown: string[] } {
-    const breakdown: string[] = [];
+): { basePoints: number; bonusPoints: number; totalPoints: number; breakdown: PointsBreakdown } {
+    const breakdown: PointsBreakdown = {
+        base: 0,
+        consecutiveBonus: 0,
+        weekendBonus: 0,
+        specialDayBonus: 0,
+    };
 
     // 1. 基础随机积分
     const basePoints = Math.floor(
         Math.random() * (config.maxPoints - config.minPoints + 1) + config.minPoints
     );
-    breakdown.push(`基础积分: ${basePoints}`);
+    breakdown.base = basePoints;
 
     let bonusPoints = 0;
 
@@ -32,9 +37,7 @@ export function calculatePoints(
             config.maxConsecutiveBonus
         );
         bonusPoints += consecutiveBonus;
-        if (consecutiveBonus > 0) {
-            breakdown.push(`连续签到加成: +${consecutiveBonus} (${consecutiveDays}天)`);
-        }
+        breakdown.consecutiveBonus = consecutiveBonus;
     }
 
     // 3. 周末加成
@@ -43,7 +46,7 @@ export function calculatePoints(
         const dayOfWeek = today.getDay();
         if (dayOfWeek === 0 || dayOfWeek === 6) {
             bonusPoints += config.weekendBonus;
-            breakdown.push(`周末加成: +${config.weekendBonus}`);
+            breakdown.weekendBonus = config.weekendBonus;
         }
     }
 
@@ -52,7 +55,7 @@ export function calculatePoints(
     const specialDay = config.specialDays.find(day => day.date === todayStr);
     if (specialDay) {
         bonusPoints += specialDay.bonus;
-        breakdown.push(`${specialDay.name}加成: +${specialDay.bonus}`);
+        breakdown.specialDayBonus = specialDay.bonus;
     }
 
     const totalPoints = basePoints + bonusPoints;

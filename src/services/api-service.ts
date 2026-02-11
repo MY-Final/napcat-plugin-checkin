@@ -7,7 +7,7 @@ import type {
     NapCatPluginContext,
 } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
-import { getUserCheckinData, getTodayCheckinCount, cleanupOldData, getAllUsersData, loadDailyStats, getGroupCheckinStats, getAllGroupsStats } from './checkin-service';
+import { getUserCheckinData, getTodayCheckinCount, cleanupOldData, getAllUsersData, getGroupCheckinStats, getAllGroupsStats, getGroupAllUsersData } from './checkin-service';
 
 /**
  * 注册 API 路由
@@ -219,13 +219,12 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
     router.getNoAuth('/checkin/stats', (_req, res) => {
         try {
             const allUsers = getAllUsersData();
-            const dailyStats = loadDailyStats();
             
             // 计算统计数据
             const totalUsers = allUsers.size;
             const totalCheckins = Array.from(allUsers.values()).reduce((sum, user) => sum + user.totalCheckinDays, 0);
             const totalPoints = Array.from(allUsers.values()).reduce((sum, user) => sum + user.totalPoints, 0);
-            const todayCheckins = dailyStats.totalCheckins;
+            const todayCheckins = getTodayCheckinCount();
             
             // 获取活跃用户（最近7天签到过）
             const oneWeekAgo = new Date();
@@ -303,6 +302,42 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
             });
         } catch (err) {
             ctx.logger.error('获取群统计失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 获取指定群的积分排行 */
+    router.getNoAuth('/checkin/groups/:id/ranking', (req, res) => {
+        try {
+            const groupId = req.params?.id;
+            if (!groupId) {
+                return res.status(400).json({ code: -1, message: '缺少群 ID' });
+            }
+
+            const groupUsers = getGroupAllUsersData(groupId);
+            
+            const sortedUsers = Array.from(groupUsers.values())
+                .sort((a, b) => b.totalPoints - a.totalPoints)
+                .slice(0, 100)
+                .map(user => ({
+                    userId: user.userId,
+                    nickname: user.nickname,
+                    totalPoints: user.totalPoints,
+                    totalCheckinDays: user.totalCheckinDays,
+                    consecutiveDays: user.consecutiveDays,
+                    lastCheckinDate: user.lastCheckinDate,
+                }));
+
+            res.json({
+                code: 0,
+                data: {
+                    groupId,
+                    totalUsers: groupUsers.size,
+                    ranking: sortedUsers,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('获取群内排行失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });
