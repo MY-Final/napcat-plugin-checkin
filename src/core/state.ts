@@ -97,8 +97,9 @@ class PluginState {
     init(ctx: NapCatPluginContext): void {
         this._ctx = ctx;
         this.startTime = Date.now();
-        this.loadConfig();
         this.ensureDataDir();
+        this.checkAndRepairData(); // 检查并修复数据
+        this.loadConfig();
         this.fetchSelfId();
     }
 
@@ -115,7 +116,7 @@ class PluginState {
                 this.logger.debug("(｡·ω·｡) 机器人 QQ: " + this.selfId);
             }
         } catch (e) {
-            this.logger.warn("(；′⌒`) 获取机器人 QQ 号失败:", e);
+            this.logger.warn("[警告] 获取机器人 QQ 号失败:", e);
         }
     }
 
@@ -160,10 +161,25 @@ class PluginState {
         const filePath = this.getDataFilePath(filename);
         try {
             if (fs.existsSync(filePath)) {
-                return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                const content = fs.readFileSync(filePath, 'utf-8');
+                return JSON.parse(content);
             }
         } catch (e) {
-            this.logger.warn("(；′⌒`) 读取数据文件 " + filename + " 失败:", e);
+            this.logger.warn("[数据保护] 读取数据文件 " + filename + " 失败，尝试从备份恢复:", e);
+            // 尝试从备份恢复
+            const backupPath = filePath + '.backup';
+            if (fs.existsSync(backupPath)) {
+                try {
+                    const content = fs.readFileSync(backupPath, 'utf-8');
+                    const data = JSON.parse(content);
+                    // 恢复主文件
+                    fs.copyFileSync(backupPath, filePath);
+                    this.logger.info(`(｡･ω･｡) 已从备份恢复数据文件: ${filename}`);
+                    return data;
+                } catch (backupError) {
+                    this.logger.error(`(╥﹏╥) 从备份恢复 ${filename} 失败:`, backupError);
+                }
+            }
         }
         return defaultValue;
     }
@@ -176,9 +192,81 @@ class PluginState {
     saveDataFile<T>(filename: string, data: T): void {
         const filePath = this.getDataFilePath(filename);
         try {
+            // 备份旧数据（如果存在）
+            if (fs.existsSync(filePath)) {
+                const backupPath = filePath + '.backup';
+                fs.copyFileSync(filePath, backupPath);
+            }
+            // 写入新数据
             fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
         } catch (e) {
             this.logger.error("(╥﹏╥) 保存数据文件 " + filename + " 失败:", e);
+        }
+    }
+
+    /**
+     * 从备份恢复数据文件
+     * @param filename 数据文件名
+     * @returns 是否恢复成功
+     */
+    restoreDataFile(filename: string): boolean {
+        const filePath = this.getDataFilePath(filename);
+        const backupPath = filePath + '.backup';
+        try {
+            if (fs.existsSync(backupPath)) {
+                fs.copyFileSync(backupPath, filePath);
+                this.logger.info(`(｡･ω･｡) 已从备份恢复数据文件: ${filename}`);
+                return true;
+            }
+        } catch (e) {
+            this.logger.error("(╥﹏╥) 恢复数据文件 " + filename + " 失败:", e);
+        }
+        return false;
+    }
+
+    /**
+     * 检查并修复数据文件
+     * 在插件启动时调用，确保数据完整性
+     */
+    checkAndRepairData(): void {
+        const dataPath = this.ctx.dataPath;
+        const dataFiles = [
+            'checkin-users.json',
+            'checkin-daily.json',
+            'plugin-config.json'
+        ];
+        
+        for (const filename of dataFiles) {
+            const filePath = path.join(dataPath, filename);
+            const backupPath = filePath + '.backup';
+            
+            // 检查主文件是否存在且有效
+            let needsRestore = false;
+            if (fs.existsSync(filePath)) {
+                try {
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    JSON.parse(content); // 验证JSON格式
+                } catch (e) {
+                    this.logger.warn(`[数据保护] 数据文件 ${filename} 损坏，尝试从备份恢复`);
+                    needsRestore = true;
+                }
+            } else {
+                // 主文件不存在，尝试从备份恢复
+                if (fs.existsSync(backupPath)) {
+                    needsRestore = true;
+                    this.logger.info(`(｡･ω･｡) 数据文件 ${filename} 不存在，尝试从备份恢复`);
+                }
+            }
+            
+            // 需要恢复且备份存在
+            if (needsRestore && fs.existsSync(backupPath)) {
+                try {
+                    fs.copyFileSync(backupPath, filePath);
+                    this.logger.info(`(｡･ω･｡) 成功恢复数据文件: ${filename}`);
+                } catch (e) {
+                    this.logger.error(`(╥﹏╥) 恢复数据文件 ${filename} 失败:`, e);
+                }
+            }
         }
     }
 
@@ -199,12 +287,45 @@ class PluginState {
                 }
                 this.ctx.logger.debug('已加载本地配置');
             } else {
+                // 尝试从备份恢复配置
+                const backupPath = configPath + '.backup';
+                if (fs.existsSync(backupPath)) {
+                    try {
+                        const raw = JSON.parse(fs.readFileSync(backupPath, 'utf-8'));
+                        this.config = sanitizeConfig(raw);
+                        if (isObject(raw) && isObject(raw.stats)) {
+                            Object.assign(this.stats, raw.stats);
+                        }
+                        // 恢复主配置文件
+                        fs.copyFileSync(backupPath, configPath);
+                        this.ctx.logger.info('(｡･ω･｡) 已从备份恢复配置文件');
+                        return;
+                    } catch (backupError) {
+                        this.ctx.logger.warn('从备份恢复配置失败:', backupError);
+                    }
+                }
                 this.config = { ...DEFAULT_CONFIG, groupConfigs: {} };
                 this.saveConfig();
                 this.ctx.logger.debug('配置文件不存在，已创建默认配置');
             }
         } catch (error) {
-            this.ctx.logger.error('加载配置失败，使用默认配置:', error);
+            this.ctx.logger.error('加载配置失败，尝试从备份恢复:', error);
+            // 尝试从备份恢复
+            const backupPath = configPath + '.backup';
+            if (fs.existsSync(backupPath)) {
+                try {
+                    const raw = JSON.parse(fs.readFileSync(backupPath, 'utf-8'));
+                    this.config = sanitizeConfig(raw);
+                    if (isObject(raw) && isObject(raw.stats)) {
+                        Object.assign(this.stats, raw.stats);
+                    }
+                    fs.copyFileSync(backupPath, configPath);
+                    this.ctx.logger.info('(｡･ω･｡) 已从备份恢复配置文件');
+                    return;
+                } catch (backupError) {
+                    this.ctx.logger.error('从备份恢复配置失败:', backupError);
+                }
+            }
             this.config = { ...DEFAULT_CONFIG, groupConfigs: {} };
         }
     }
