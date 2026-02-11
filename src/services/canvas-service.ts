@@ -40,21 +40,25 @@ async function loadModules(): Promise<boolean> {
     try {
         // 尝试加载 canvas
         canvasModule = await import('canvas');
+        pluginState.logger.info('✅ Canvas 模块加载成功');
     } catch (error) {
-        pluginState.logger.debug('Canvas 模块不可用');
+        pluginState.logger.warn('❌ Canvas 模块不可用:', error instanceof Error ? error.message : String(error));
         canvasModule = null;
     }
 
     try {
         // 尝试加载 axios
         axiosModule = await import('axios');
+        pluginState.logger.info('✅ Axios 模块加载成功');
     } catch (error) {
-        pluginState.logger.debug('Axios 模块不可用');
+        pluginState.logger.warn('❌ Axios 模块不可用:', error instanceof Error ? error.message : String(error));
         axiosModule = null;
     }
 
     modulesLoaded = true;
-    return canvasModule !== null && axiosModule !== null;
+    const result = canvasModule !== null && axiosModule !== null;
+    pluginState.logger.info(`模块加载结果: Canvas=${canvasModule !== null}, Axios=${axiosModule !== null}`);
+    return result;
 }
 
 /**
@@ -62,16 +66,27 @@ async function loadModules(): Promise<boolean> {
  */
 async function loadAvatar(avatarUrl: string): Promise<Buffer> {
     if (!axiosModule) {
-        throw new Error('Axios 不可用');
+        throw new Error('Axios 模块未加载');
     }
     try {
+        pluginState.logger.debug(`正在下载头像: ${avatarUrl}`);
         const response = await axiosModule.default.get(avatarUrl, {
             responseType: 'arraybuffer',
-            timeout: 5000,
+            timeout: 10000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
         });
+        
+        if (!response.data || response.data.length === 0) {
+            throw new Error('头像数据为空');
+        }
+        
+        pluginState.logger.debug(`头像下载成功，大小: ${response.data.length} bytes`);
         return Buffer.from(response.data);
     } catch (error) {
-        pluginState.logger.warn('下载头像失败:', error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        pluginState.logger.error(`下载头像失败 (${avatarUrl}):`, errorMsg);
         throw error;
     }
 }
@@ -266,27 +281,43 @@ function drawBorder(ctx: CanvasRenderingContext2D): void {
  */
 async function generateImageCard(data: CheckinCardData): Promise<Buffer> {
     if (!canvasModule) {
-        throw new Error('Canvas 不可用');
+        throw new Error('Canvas 模块未加载');
     }
 
+    pluginState.logger.debug('创建画布...');
     const canvas = canvasModule.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
     const ctx = canvas.getContext('2d');
 
+    pluginState.logger.debug('绘制背景...');
     ctx.fillStyle = COLORS.background;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    pluginState.logger.debug('绘制装饰效果...');
     drawGradientGlow(ctx);
     drawSideBar(ctx);
 
-    const avatarBuffer = await loadAvatar(data.avatarUrl);
+    pluginState.logger.debug('下载用户头像...');
+    let avatarBuffer: Buffer;
+    try {
+        avatarBuffer = await loadAvatar(data.avatarUrl);
+        pluginState.logger.debug('头像下载成功');
+    } catch (error) {
+        pluginState.logger.warn('头像下载失败，使用默认占位:', error instanceof Error ? error.message : String(error));
+        // 创建一个透明的占位头像
+        avatarBuffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+    }
+    
+    pluginState.logger.debug('绘制头像...');
     await drawAvatar(ctx, avatarBuffer, 30, 35, 70);
 
+    pluginState.logger.debug('绘制文字内容...');
     drawHeader(ctx, data);
     drawPoints(ctx, data.earnedPoints);
     drawStats(ctx, data);
     drawFooter(ctx, data);
     drawBorder(ctx);
 
+    pluginState.logger.debug('生成图片buffer...');
     return canvas.toBuffer('image/png');
 }
 
@@ -296,17 +327,25 @@ async function generateImageCard(data: CheckinCardData): Promise<Buffer> {
  */
 export async function generateCheckinCard(data: CheckinCardData): Promise<Buffer | null> {
     try {
+        pluginState.logger.info('开始生成签到卡片...');
+        
         // 先尝试加载模块
         const canUseCanvas = await loadModules();
         
         if (!canUseCanvas) {
-            pluginState.logger.debug('Canvas 不可用，使用文字模式');
+            pluginState.logger.warn('Canvas 或 Axios 模块不可用，无法生成图片');
             return null;
         }
         
-        return await generateImageCard(data);
+        pluginState.logger.info('模块检查通过，开始绘制卡片...');
+        const result = await generateImageCard(data);
+        pluginState.logger.info('签到卡片生成成功');
+        return result;
     } catch (error) {
-        pluginState.logger.error('生成签到卡片失败:', error);
+        pluginState.logger.error('生成签到卡片失败:', error instanceof Error ? error.message : String(error));
+        if (error instanceof Error && error.stack) {
+            pluginState.logger.error('错误堆栈:', error.stack);
+        }
         return null;
     }
 }
