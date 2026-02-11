@@ -55,28 +55,33 @@ export default function ConfigPage() {
 
     return (
         <div className="space-y-6 stagger-children">
+            {/* 插件信息头部 */}
+            <div className="p-4 rounded-xl" style={{ background: 'linear-gradient(135deg, #FB7299 0%, #FF8FB0 100%)' }}>
+                <h3 className="text-lg font-semibold text-white mb-1">✨ NapCat 签到插件</h3>
+                <p className="text-sm text-white opacity-90">精美卡片式签到系统，支持连续签到加成和积分统计</p>
+            </div>
+
             {/* 基础配置 */}
             <div className="card p-5 hover-lift">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
-                    <IconTerminal size={16} className="text-gray-400" />
-                    基础配置
+                    📋 基础设置
                 </h3>
                 <div className="space-y-5">
                     <ToggleRow
                         label="启用插件"
-                        desc="全局开关，关闭后不响应任何命令"
+                        desc="是否启用此插件的功能"
                         checked={config.enabled}
                         onChange={(v) => updateField('enabled', v)}
                     />
                     <ToggleRow
                         label="调试模式"
-                        desc="启用后输出详细日志到控制台"
+                        desc="启用后将输出详细的调试日志"
                         checked={config.debug}
                         onChange={(v) => updateField('debug', v)}
                     />
                     <InputRow
                         label="命令前缀"
-                        desc="触发命令的前缀"
+                        desc="触发命令的前缀，默认为 #cmd"
                         value={config.commandPrefix}
                         onChange={(v) => updateField('commandPrefix', v)}
                     />
@@ -87,7 +92,101 @@ export default function ConfigPage() {
                         type="number"
                         onChange={(v) => updateField('cooldownSeconds', Number(v) || 0)}
                     />
-                    {/* TODO: 在这里添加你的配置项 */}
+                </div>
+            </div>
+
+            {/* 签到功能设置 */}
+            <div className="card p-5 hover-lift">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
+                    📅 签到功能设置
+                </h3>
+                <div className="space-y-5">
+                    <ToggleRow
+                        label="启用签到功能"
+                        desc="是否启用签到功能"
+                        checked={config.enableCheckin}
+                        onChange={(v) => updateField('enableCheckin', v)}
+                    />
+                    <InputRow
+                        label="签到命令"
+                        desc="触发签到的命令关键词"
+                        value={config.checkinCommand}
+                        onChange={(v) => updateField('checkinCommand', v)}
+                    />
+                </div>
+            </div>
+
+            {/* 积分设置 */}
+            <div className="card p-5 hover-lift">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
+                    💎 积分设置
+                </h3>
+                <div className="space-y-5">
+                    <InputRow
+                        label="最小积分"
+                        desc="每次签到最少获得的基础积分"
+                        value={String(config.checkinPoints?.minPoints ?? 10)}
+                        type="number"
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, minPoints: Number(v) || 10 })}
+                    />
+                    <InputRow
+                        label="最大积分"
+                        desc="每次签到最多获得的基础积分"
+                        value={String(config.checkinPoints?.maxPoints ?? 50)}
+                        type="number"
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, maxPoints: Number(v) || 50 })}
+                    />
+                </div>
+            </div>
+
+            {/* 连续签到加成 */}
+            <div className="card p-5 hover-lift">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
+                    🔥 连续签到加成
+                </h3>
+                <div className="space-y-5">
+                    <ToggleRow
+                        label="启用连续签到加成"
+                        desc="是否启用连续签到额外加成"
+                        checked={config.checkinPoints?.enableConsecutiveBonus ?? true}
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, enableConsecutiveBonus: v })}
+                    />
+                    <InputRow
+                        label="每天加成点数"
+                        desc="每连续签到一天额外获得的积分"
+                        value={String(config.checkinPoints?.consecutiveBonusPerDay ?? 2)}
+                        type="number"
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, consecutiveBonusPerDay: Number(v) || 2 })}
+                    />
+                    <InputRow
+                        label="最大加成上限"
+                        desc="连续签到加成的上限值"
+                        value={String(config.checkinPoints?.maxConsecutiveBonus ?? 20)}
+                        type="number"
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, maxConsecutiveBonus: Number(v) || 20 })}
+                    />
+                </div>
+            </div>
+
+            {/* 周末加成 */}
+            <div className="card p-5 hover-lift">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
+                    🌟 周末加成
+                </h3>
+                <div className="space-y-5">
+                    <ToggleRow
+                        label="启用周末加成"
+                        desc="是否在周末给予额外加成"
+                        checked={config.checkinPoints?.enableWeekendBonus ?? false}
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, enableWeekendBonus: v })}
+                    />
+                    <InputRow
+                        label="周末加成点数"
+                        desc="周末签到的额外加成积分"
+                        value={String(config.checkinPoints?.weekendBonus ?? 5)}
+                        type="number"
+                        onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, weekendBonus: Number(v) || 5 })}
+                    />
                 </div>
             </div>
 

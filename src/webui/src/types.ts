@@ -18,7 +18,23 @@ export interface PluginConfig {
     commandPrefix: string
     cooldownSeconds: number
     groupConfigs?: Record<string, GroupConfig>
-    // TODO: 在这里添加你的插件配置项类型
+    // 签到配置
+    enableCheckin: boolean
+    checkinCommand: string
+    checkinPoints: {
+        minPoints: number
+        maxPoints: number
+        enableConsecutiveBonus: boolean
+        consecutiveBonusPerDay: number
+        maxConsecutiveBonus: number
+        enableWeekendBonus: boolean
+        weekendBonus: number
+        specialDays: Array<{
+            date: string
+            name: string
+            bonus: number
+        }>
+    }
 }
 
 export interface GroupConfig {
