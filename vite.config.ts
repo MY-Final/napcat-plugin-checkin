@@ -1,5 +1,5 @@
 import { resolve, dirname } from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import { builtinModules } from 'module';
 import { fileURLToPath } from 'url';
@@ -14,8 +14,9 @@ const nodeModules = [
     ...builtinModules.map((m) => `node:${m}`),
 ].flat();
 
-// 依赖排除（如有外部依赖需排除，在此添加）
-const external: string[] = [];
+// 依赖排除 - canvas 和 axios 作为外部依赖（可选）
+// 如果目标机器安装了这些模块，会生成图片；否则会使用文字模式
+const external: string[] = ['canvas', 'axios'];
 
 /**
  * 递归复制目录
@@ -38,9 +39,6 @@ function copyDirRecursive(src: string, dest: string) {
 
 /**
  * 构建后自动复制资源的 Vite 插件
- * - 复制 webui 构建产物到 dist/webui
- * - 生成精简的 package.json（只保留运行时必要字段）
- * - 复制 templates 目录（如果存在）
  */
 function copyAssetsPlugin() {
     return {
@@ -52,7 +50,6 @@ function copyAssetsPlugin() {
                 // 1. 构建 WebUI 前端
                 const webuiRoot = resolve(__dirname, 'src/webui');
                 try {
-                    // 先确保 webui 子项目的依赖已安装
                     if (!fs.existsSync(resolve(webuiRoot, 'node_modules'))) {
                         console.log('[copy-assets] (o\'v\'o) 正在安装 WebUI 依赖...');
                         execSync('pnpm install', {
@@ -82,10 +79,10 @@ function copyAssetsPlugin() {
                     copyDirRecursive(webuiDist, webuiDest);
                     console.log('[copy-assets] (o\'v\'o) 已复制 webui 构建产物');
                 } else {
-                    console.error('[copy-assets] (;_;) webui 构建产物不存在，请先运行 pnpm run build:webui');
+                    console.error('[copy-assets] (;_;) webui 构建产物不存在');
                 }
 
-                // 3. 生成精简的 package.json（只保留运行时必要字段）
+                // 3. 生成精简的 package.json（不包含任何依赖，所有依赖都已打包）
                 const pkgPath = resolve(__dirname, 'package.json');
                 if (fs.existsSync(pkgPath)) {
                     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
@@ -97,7 +94,7 @@ function copyAssetsPlugin() {
                         main: pkg.main,
                         description: pkg.description,
                         author: pkg.author,
-                        dependencies: pkg.dependencies,
+                        // 不声明任何依赖，所有代码都已打包
                     };
                     if (pkg.napcat) {
                         distPkg.napcat = pkg.napcat;
@@ -124,6 +121,9 @@ function copyAssetsPlugin() {
     };
 }
 
+// 加载 .env 文件中的环境变量
+const env = loadEnv(process.env.NODE_ENV || 'development', __dirname, 'VITE_');
+
 export default defineConfig({
     resolve: {
         conditions: ['node', 'default'],
@@ -146,6 +146,8 @@ export default defineConfig({
         outDir: 'dist',
     },
     plugins: [nodeResolve(), copyAssetsPlugin(), napcatHmrPlugin({
+        // wsUrl: env.VITE_WS_URL || 'ws://127.0.0.1:18898',
+        // token: env.VITE_TOKEN,
         webui: {
             distDir: './src/webui/dist',
             targetDir: 'webui',

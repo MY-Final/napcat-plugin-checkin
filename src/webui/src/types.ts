@@ -40,3 +40,44 @@ export interface ApiResponse<T = unknown> {
     data?: T
     message?: string
 }
+
+// ==================== 签到数据类型 ====================
+
+export interface UserRanking {
+    userId: string
+    nickname: string
+    totalPoints: number
+    totalCheckinDays: number
+    consecutiveDays: number
+    lastCheckinDate: string
+}
+
+export interface GroupUserInfo {
+    userId: string
+    nickname: string
+    groupPoints: number
+    groupCheckinDays: number
+    lastCheckinDate: string
+}
+
+export interface GroupCheckinStats {
+    groupId: string
+    groupName?: string
+    totalCheckins: number
+    totalPoints: number
+    todayCheckins: number
+    users: GroupUserInfo[]
+}
+
+export interface CheckinStats {
+    totalUsers: number
+    totalCheckins: number
+    totalPoints: number
+    todayCheckins: number
+    activeUsers: number
+}
+
+export interface RankingData {
+    totalUsers: number
+    ranking: UserRanking[]
+}

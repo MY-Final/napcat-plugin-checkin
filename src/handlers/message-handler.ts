@@ -5,14 +5,12 @@
  * - 命令解析与分发
  * - CD 冷却管理
  * - 消息发送工具函数
- *
- * 最佳实践：将不同类型的业务逻辑拆分到不同的 handler 文件中，
- * 保持每个文件职责单一。
  */
 
 import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
+import { handleCheckinCommand, handleCheckinAdmin, handleCheckinQuery } from './checkin-handler';
 
 // ==================== CD 冷却管理 ====================
 
@@ -124,52 +122,6 @@ export async function sendPrivateMessage(
     }
 }
 
-// ==================== 合并转发消息 ====================
-
-/** 合并转发消息节点 */
-export interface ForwardNode {
-    type: 'node';
-    data: {
-        nickname: string;
-        user_id?: string;
-        content: Array<{ type: string; data: Record<string, unknown> }>;
-    };
-}
-
-/**
- * 发送合并转发消息
- * @param ctx 插件上下文
- * @param target 群号或用户 ID
- * @param isGroup 是否为群消息
- * @param nodes 合并转发节点列表
- */
-export async function sendForwardMsg(
-    ctx: NapCatPluginContext,
-    target: number | string,
-    isGroup: boolean,
-    nodes: ForwardNode[],
-): Promise<boolean> {
-    try {
-        const actionName = isGroup ? 'send_group_forward_msg' : 'send_private_forward_msg';
-        const params: Record<string, unknown> = { message: nodes };
-        if (isGroup) {
-            params.group_id = String(target);
-        } else {
-            params.user_id = String(target);
-        }
-        await ctx.actions.call(
-            actionName as 'send_group_forward_msg',
-            params as never,
-            ctx.adapterName,
-            ctx.pluginManager.config,
-        );
-        return true;
-    } catch (error) {
-        pluginState.logger.error('发送合并转发消息失败:', error);
-        return false;
-    }
-}
-
 // ==================== 权限检查 ====================
 
 /**
@@ -186,7 +138,6 @@ export function isAdmin(event: OB11Message): boolean {
 
 /**
  * 消息处理主函数
- * 在这里实现你的命令处理逻辑
  */
 export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message): Promise<void> {
     try {
@@ -202,6 +153,21 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
             if (!pluginState.isGroupEnabled(String(groupId))) return;
         }
 
+        // 检查签到命令（无需前缀）
+        const checkinCommand = pluginState.config.checkinCommand || '签到';
+        if (pluginState.config.enableCheckin && rawMessage.trim() === checkinCommand) {
+            // 检查该群是否启用签到
+            if (messageType === 'group' && groupId) {
+                const groupConfig = pluginState.config.groupConfigs[String(groupId)];
+                if (groupConfig?.enableCheckin === false) {
+                    return;
+                }
+            }
+            await handleCheckinCommand(ctx, event);
+            pluginState.incrementProcessed();
+            return;
+        }
+
         // 检查命令前缀
         const prefix = pluginState.config.commandPrefix || '#cmd';
         if (!rawMessage.startsWith(prefix)) return;
@@ -210,16 +176,40 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
         const args = rawMessage.slice(prefix.length).trim().split(/\s+/);
         const subCommand = args[0]?.toLowerCase() || '';
 
-        // TODO: 在这里实现你的命令处理逻辑
         switch (subCommand) {
             case 'help': {
-                const helpText = [
-                    `[= 插件帮助 =]`,
-                    `${prefix} help - 显示帮助信息`,
-                    `${prefix} ping - 测试连通性`,
-                    `${prefix} status - 查看运行状态`,
-                ].join('\n');
-                await sendReply(ctx, event, helpText);
+                const isGroup = messageType === 'group';
+                const isAdminUser = isAdmin(event);
+                
+                let helpText = [
+                    `📋 签到插件帮助`,
+                    ``,
+                    `【基本功能】`,
+                    `${checkinCommand} - 每日签到，获取积分`,
+                    `${prefix}我的积分 - 查询个人积分和签到数据`,
+                    `${prefix}积分排行 - 查看群内积分排行（群聊）`,
+                    `${prefix}总排行 - 查看全服积分排行`,
+                    ``,
+                ];
+                
+                // 群管理命令
+                if (isGroup && isAdminUser) {
+                    helpText.push(
+                        `【群管理】`,
+                        `${prefix}开启签到 - 开启本群签到功能`,
+                        `${prefix}关闭签到 - 关闭本群签到功能`,
+                        ``
+                    );
+                }
+                
+                helpText.push(
+                    `【其他】`,
+                    `${prefix}help - 显示帮助信息`,
+                    `${prefix}ping - 测试连通性`,
+                    `${prefix}status - 查看运行状态`
+                );
+                
+                await sendReply(ctx, event, helpText.join('\n'));
                 break;
             }
 
@@ -250,8 +240,56 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 break;
             }
 
+            case '开启签到':
+            case '关闭签到': {
+                // 群管理命令：开启/关闭签到功能
+                if (messageType !== 'group' || !groupId) {
+                    await sendReply(ctx, event, '此命令只能在群聊中使用');
+                    break;
+                }
+                
+                // 检查权限
+                if (!isAdmin(event)) {
+                    await sendReply(ctx, event, '只有群主或管理员才能使用此命令');
+                    break;
+                }
+                
+                const enable = subCommand === '开启签到';
+                pluginState.updateGroupConfig(String(groupId), { enableCheckin: enable });
+                await sendReply(ctx, event, `✅ 已${enable ? '开启' : '关闭'}本群签到功能`);
+                pluginState.logger.info(`群 ${groupId} 签到功能已${enable ? '开启' : '关闭'}`);
+                break;
+            }
+
+            case '我的积分':
+            case '积分':
+            case '积分查询': {
+                await handleCheckinQuery(ctx, event, 'self');
+                pluginState.incrementProcessed();
+                break;
+            }
+
+            case '群积分':
+            case '群排名':
+            case '积分排行': {
+                if (messageType !== 'group' || !groupId) {
+                    await sendReply(ctx, event, '此命令只能在群聊中使用');
+                    break;
+                }
+                await handleCheckinQuery(ctx, event, 'group');
+                pluginState.incrementProcessed();
+                break;
+            }
+
+            case '总排行':
+            case '排行榜': {
+                await handleCheckinQuery(ctx, event, 'global');
+                pluginState.incrementProcessed();
+                break;
+            }
+
             default: {
-                // TODO: 在这里处理你的主要命令逻辑
+                // 未知命令不处理
                 break;
             }
         }

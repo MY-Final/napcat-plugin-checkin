@@ -1,5 +1,5 @@
 import type { PageId } from '../App'
-import { IconDashboard, IconSettings, IconGroup, IconGithub, IconPlugin, IconSun } from './icons'
+import { IconDashboard, IconSettings, IconGroup, IconGithub, IconPlugin, IconSun, IconChart } from './icons'
 
 interface SidebarProps {
     currentPage: PageId
@@ -10,6 +10,7 @@ const menuItems: { id: PageId; label: string; icon: React.ReactNode }[] = [
     { id: 'status', label: '仪表盘', icon: <IconDashboard size={18} /> },
     { id: 'config', label: '插件配置', icon: <IconSettings size={18} /> },
     { id: 'groups', label: '群管理', icon: <IconGroup size={18} /> },
+    { id: 'checkin', label: '签到数据', icon: <IconChart size={18} /> },
 ]
 
 export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
@@ -21,8 +22,9 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                     <IconPlugin size={18} />
                 </div>
                 <div>
-                    <h1 className="font-bold text-sm leading-tight text-gray-900 dark:text-white">Plugin Template</h1>
-                    <p className="text-[10px] text-gray-400 font-medium tracking-wider">NAPCAT PLUGIN</p>
+                    <h1 className="font-bold text-sm leading-tight text-gray-900 dark:text-white">
+                        签到插件</h1>
+                    <p className="text-[10px] text-gray-400 font-medium tracking-wider">napcat-plugin-checkin</p>
                 </div>
             </div>
 
@@ -43,7 +45,7 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
             {/* Footer */}
             <div className="px-3 pb-2">
                 <a
-                    href="https://github.com"
+                    href="https://github.com/MY-Final/napcat-plugin-checkin"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="sidebar-item no-underline"

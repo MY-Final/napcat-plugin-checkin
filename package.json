@@ -1,32 +1,39 @@
 {
-  "name": "napcat-plugin-template",
-  "plugin": "插件模板",
+  "name": "napcat-plugin-checkin",
+  "plugin": "签到插件",
   "version": "1.0.0",
   "type": "module",
   "main": "index.mjs",
-  "description": "NapCat 插件开发模板 - 快速开始你的插件开发",
-  "author": "Your Name",
+  "description": "NapCat 精美签到插件 - 支持连续签到加成、积分统计",
+  "author": "MY-Final",
+  "homepage": "https://github.com/MY-Final/napcat-plugin-checkin",
   "license": "MIT",
   "keywords": [
     "napcat",
     "plugin",
     "qq",
-    "template"
+    "checkin",
+    "签到",
+    "canvas"
   ],
   "napcat": {
     "tags": [
-      "工具"
+      "工具",
+      "娱乐"
     ],
     "minVersion": "4.14.0",
-    "homepage": ""
+    "homepage": "https://github.com/MY-Final/napcat-plugin-checkin"
   },
   "dependencies": {
+    "axios": "^1.7.9",
+    "canvas": "^3.1.0",
     "napcat-types": "0.0.16"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.3.1",
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.33",
+    "dotenv": "^17.2.4",
     "napcat-plugin-debug-cli": "^1.2.8",
     "typescript": "^5.9.3",
     "vite": "^6.4.1",
