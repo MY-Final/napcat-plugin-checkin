@@ -19,6 +19,7 @@ function generateCheckinHtml(data: CheckinCardData): string {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>签到卡片</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -27,7 +28,7 @@ function generateCheckinHtml(data: CheckinCardData): string {
         }
         body {
             background: transparent;
-            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+            font-family: "Noto Sans", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
         }
         .card {
             width: 600px;
