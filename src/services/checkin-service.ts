@@ -227,14 +227,17 @@ export async function performCheckin(
         }
         
         globalUserData.nickname = nickname;
-        // 只有今天没签到过才增加天数
+        
+        // 获取全局排名（即使今天已签到也要用）
+        const globalDailyStats = loadGroupDailyStats('global');
+        const globalRank = globalDailyStats.userIds.length + 1;
+        
+        // 只有今天没签到过才增加天数和积分
         if (!hasCheckedInToday) {
             globalUserData.totalCheckinDays += 1;
             globalUserData.totalPoints += totalPoints;
             
             // 添加到全局历史记录
-            const globalDailyStats = loadGroupDailyStats('global');
-            const globalRank = globalDailyStats.userIds.length + 1;
             globalUserData.checkinHistory.push({
                 date: today,
                 points: totalPoints,
