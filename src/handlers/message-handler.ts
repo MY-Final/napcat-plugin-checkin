@@ -153,9 +153,12 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
             if (!pluginState.isGroupEnabled(String(groupId))) return;
         }
 
-        // 检查签到命令（无需前缀）
-        const checkinCommand = pluginState.config.checkinCommand || '签到';
-        if (pluginState.config.enableCheckin && rawMessage.trim() === checkinCommand) {
+        // 检查签到命令（无需前缀，支持多个命令）
+        const checkinCommands = pluginState.config.checkinCommands || [pluginState.config.checkinCommand || '签到'];
+        const trimmedMessage = rawMessage.trim();
+        const isCheckinCommand = pluginState.config.enableCheckin && checkinCommands.includes(trimmedMessage);
+        
+        if (isCheckinCommand) {
             // 检查该群是否启用签到
             if (messageType === 'group' && groupId) {
                 const groupConfig = pluginState.config.groupConfigs[String(groupId)];
@@ -181,11 +184,15 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 const isGroup = messageType === 'group';
                 const isAdminUser = isAdmin(event);
                 
+                // 获取所有签到命令用于显示
+                const commands = pluginState.config.checkinCommands || [pluginState.config.checkinCommand || '签到'];
+                const commandsText = commands.join(' / ');
+                
                 let helpText = [
                     `📋 签到插件帮助`,
                     ``,
                     `【基本功能】`,
-                    `${checkinCommand} - 每日签到，获取积分`,
+                    `${commandsText} - 每日签到，获取积分`,
                     `${prefix}我的积分 - 查询个人积分和签到数据`,
                     `${prefix}积分排行 - 查看群内积分排行（群聊）`,
                     `${prefix}总排行 - 查看全服积分排行`,

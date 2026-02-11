@@ -65,8 +65,8 @@ export interface PluginConfig {
     groupConfigs: Record<string, GroupConfig>;
     /** 是否启用签到功能 */
     enableCheckin: boolean;
-    /** 签到命令关键词 */
-    checkinCommand: string;
+    /** 签到命令关键词列表（支持多个命令触发签到） */
+    checkinCommands: string[];
     /** 积分配置 */
     checkinPoints: CheckinPointsConfig;
 }

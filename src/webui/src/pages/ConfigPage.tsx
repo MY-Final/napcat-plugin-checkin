@@ -107,11 +107,11 @@ export default function ConfigPage() {
                         checked={config.enableCheckin}
                         onChange={(v) => updateField('enableCheckin', v)}
                     />
-                    <InputRow
-                        label="签到命令"
-                        desc="触发签到的命令关键词"
-                        value={config.checkinCommand}
-                        onChange={(v) => updateField('checkinCommand', v)}
+                    <CommandListRow
+                        label="签到命令列表"
+                        desc="触发签到的命令关键词，可添加多个"
+                        commands={config.checkinCommands || ['签到']}
+                        onChange={(commands) => updateField('checkinCommands', commands)}
                     />
                 </div>
             </div>
@@ -241,6 +241,68 @@ function InputRow({ label, desc, value, type = 'text', onChange }: {
                 onBlur={handleBlur}
                 onKeyDown={(e) => e.key === 'Enter' && handleBlur()}
             />
+        </div>
+    )
+}
+
+function CommandListRow({ label, desc, commands, onChange }: {
+    label: string; desc: string; commands: string[]; onChange: (commands: string[]) => void
+}) {
+    const [newCommand, setNewCommand] = useState('')
+
+    const handleAdd = () => {
+        const trimmed = newCommand.trim()
+        if (trimmed && !commands.includes(trimmed)) {
+            onChange([...commands, trimmed])
+            setNewCommand('')
+        }
+    }
+
+    const handleRemove = (cmd: string) => {
+        onChange(commands.filter(c => c !== cmd))
+    }
+
+    return (
+        <div>
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">{label}</div>
+            <div className="text-xs text-gray-400 mb-3">{desc}</div>
+            
+            {/* 命令列表 */}
+            <div className="flex flex-wrap gap-2 mb-3">
+                {commands.map((cmd, index) => (
+                    <div 
+                        key={index} 
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 rounded-full text-sm"
+                    >
+                        <span>{cmd}</span>
+                        <button 
+                            onClick={() => handleRemove(cmd)}
+                            className="text-brand-500 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-200 font-bold"
+                        >
+                            ×
+                        </button>
+                    </div>
+                ))}
+            </div>
+            
+            {/* 添加新命令 */}
+            <div className="flex gap-2">
+                <input
+                    className="input-field flex-1"
+                    type="text"
+                    placeholder="输入新命令..."
+                    value={newCommand}
+                    onChange={(e) => setNewCommand(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                />
+                <button
+                    onClick={handleAdd}
+                    disabled={!newCommand.trim()}
+                    className="px-4 py-2 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                    添加
+                </button>
+            </div>
         </div>
     )
 }

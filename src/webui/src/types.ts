@@ -20,7 +20,8 @@ export interface PluginConfig {
     groupConfigs?: Record<string, GroupConfig>
     // 签到配置
     enableCheckin: boolean
-    checkinCommand: string
+    checkinCommands: string[]
+    checkinCommand?: string  // 向后兼容
     checkinPoints: {
         minPoints: number
         maxPoints: number
