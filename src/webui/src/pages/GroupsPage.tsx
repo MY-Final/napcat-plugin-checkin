@@ -42,6 +42,21 @@ export default function GroupsPage() {
         }
     }
 
+    const toggleCheckin = async (groupId: number, enableCheckin: boolean) => {
+        try {
+            await noAuthFetch(`/groups/${groupId}/config`, {
+                method: 'POST',
+                body: JSON.stringify({ enableCheckin }),
+            })
+            setGroups(prev => prev.map(g =>
+                g.group_id === groupId ? { ...g, enable_checkin: enableCheckin } : g
+            ))
+            showToast(`群 ${groupId} 签到功能已${enableCheckin ? '开启' : '关闭'}`, 'success')
+        } catch {
+            showToast('操作失败', 'error')
+        }
+    }
+
     const bulkToggle = async (enabled: boolean) => {
         if (selected.size === 0) {
             showToast('请先选择群', 'warning')
@@ -153,7 +168,8 @@ export default function GroupsPage() {
                             <th className="py-2.5 px-4 font-medium">群名称</th>
                             <th className="py-2.5 px-4 font-medium">群号</th>
                             <th className="py-2.5 px-4 font-medium">成员</th>
-                            <th className="py-2.5 px-4 font-medium text-right">状态</th>
+                            <th className="py-2.5 px-4 font-medium text-center">群启用</th>
+                            <th className="py-2.5 px-4 font-medium text-center">签到功能</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -176,12 +192,22 @@ export default function GroupsPage() {
                                 <td className="py-2.5 px-4 text-xs text-gray-500">
                                     {group.member_count}/{group.max_member_count}
                                 </td>
-                                <td className="py-2.5 px-4 text-right">
-                                    <label className="toggle">
+                                <td className="py-2.5 px-4 text-center">
+                                    <label className="toggle" title="群功能总开关">
                                         <input
                                             type="checkbox"
                                             checked={group.enabled}
                                             onChange={() => toggleGroup(group.group_id, !group.enabled)}
+                                        />
+                                        <div className="slider" />
+                                    </label>
+                                </td>
+                                <td className="py-2.5 px-4 text-center">
+                                    <label className="toggle" title="签到功能开关">
+                                        <input
+                                            type="checkbox"
+                                            checked={group.enable_checkin}
+                                            onChange={() => toggleCheckin(group.group_id, !group.enable_checkin)}
                                         />
                                         <div className="slider" />
                                     </label>

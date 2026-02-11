@@ -51,6 +51,8 @@ export interface GroupInfo {
     member_count: number
     max_member_count: number
     enabled: boolean
+    /** 是否启用群内签到功能 */
+    enable_checkin: boolean
     /** 定时推送时间（如 '08:30'），null 表示未设置（模板默认不使用，按需扩展） */
     scheduleTime?: string | null
 }
