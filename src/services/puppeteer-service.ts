@@ -12,14 +12,44 @@ const PUPPETEER_API = 'http://127.0.0.1:6099/plugin/napcat-plugin-puppeteer/api/
 /**
  * 生成签到卡片 HTML 模板（使用 HTML/CSS，避免 Canvas 字体和跨域问题）
  */
+/**
+ * 检测是否为特殊 Unicode 字符（数学字母、装饰符号等）
+ * 这些字符在普通中文字体中可能显示为方框
+ */
+function hasSpecialUnicode(text: string): boolean {
+    // 检测数学字母数字符号区段、装饰符号等
+    const specialRanges = [
+        /[\u{1D400}-\u{1D7FF}]/u, // 数学字母数字符号
+        /[\u{2100}-\u{214F}]/u,   // 字母符号
+        /[\u{2460}-\u{24FF}]/u,   // 带圈字母数字
+        /[\u{2600}-\u{26FF}]/u,   // 杂项符号
+        /[\u{2700}-\u{27BF}]/u,   // 装饰符号
+    ];
+    return specialRanges.some(range => range.test(text));
+}
+
+/**
+ * 处理昵称：检测特殊字符，如有必要则提供替代显示
+ */
+function processNickname(nickname: string, userId: string): string {
+    // 如果昵称包含特殊 Unicode 字符，添加 title 提示
+    const needsFallback = hasSpecialUnicode(nickname);
+    if (needsFallback) {
+        // 保留原昵称，但添加 title 属性显示 QQ 号
+        return `<span title="QQ: ${userId}">${escapeHtml(nickname)}</span>`;
+    }
+    return escapeHtml(nickname);
+}
+
 function generateCheckinHtml(data: CheckinCardData): string {
+    const displayNickname = processNickname(data.nickname, data.userId);
+    
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>签到卡片</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -28,7 +58,8 @@ function generateCheckinHtml(data: CheckinCardData): string {
         }
         body {
             background: transparent;
-            font-family: "Noto Sans", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+            /* 使用系统字体栈，不依赖外部 CDN */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
         }
         .card {
             width: 600px;
@@ -175,7 +206,7 @@ function generateCheckinHtml(data: CheckinCardData): string {
         <div class="user-info">
             <img class="avatar" src="${data.avatarUrl}" alt="avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23fecdd3%22/></svg>'">
             <div class="user-text">
-                <div class="nickname">${escapeHtml(data.nickname)}</div>
+                <div class="nickname">${displayNickname}</div>
                 <div class="qq">QQ: ${data.userId}</div>
             </div>
         </div>
