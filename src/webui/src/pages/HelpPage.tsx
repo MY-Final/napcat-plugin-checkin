@@ -49,10 +49,21 @@ export default function HelpPage() {
                     <IconSparkles size={28} />
                     <h1 className="text-2xl font-bold">欢迎使用签到插件</h1>
                 </div>
-                <p className="text-brand-100 text-lg leading-relaxed max-w-3xl">
+                <p className="text-brand-100 text-lg leading-relaxed max-w-3xl mb-6">
                     这是一个功能强大的 NapCat 签到插件，支持精美签到卡片、积分系统、多群独立统计，
                     并且提供了丰富的 API 接口供其他插件扩展使用。
                 </p>
+                <a
+                    href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=myZ-6WbZkavmF1KWGNdTQ8SpbVAi_hjY&authKey=qytWUv7F5XBh18%2FbyLreigwR3QzfSh9nKPu3anwOdcoOqPyzZOavROvPNGdLmq8V&noverify=0&group_code=1072957415"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.97 1.25-5.57 3.67-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.05-.49-.83-.27-1.49-.42-1.43-.88.03-.25.35-.51.96-.78 3.76-1.64 6.27-2.72 7.53-3.26 3.58-1.49 4.33-1.75 4.81-1.76.11 0 .35.03.51.16.13.11.17.26.18.38-.01.08-.01.19-.02.33z"/>
+                    </svg>
+                    加入QQ群（1072957415）
+                </a>
             </div>
 
             {/* 核心功能 */}
@@ -205,13 +216,22 @@ const result = await fetch('/plugin/napcat-plugin-checkin/api/checkin/groups/123
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                             在"模板编辑"页面可以自定义签到卡片的 HTML 模板，支持以下变量：
                         </p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
                             {['{{nickname}}', '{{userId}}', '{{totalPoints}}', '{{totalDays}}', 
                               '{{todayRank}}', '{{checkinTime}}', '{{currentDate}}', '{{quote}}'].map((variable) => (
                                 <code key={variable} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-brand-600 dark:text-brand-400 rounded text-xs text-center">
                                     {variable}
                                 </code>
                             ))}
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                            <p className="text-sm text-blue-800 dark:text-blue-200">
+                                <strong>依赖说明：</strong>如需使用图片打卡功能，需要安装 
+                                <a href="https://github.com/AQiaoYo/napcat-plugin-puppeteer" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">
+                                    napcat-plugin-puppeteer
+                                </a> 插件。
+                                本插件的模板编辑功能仿照 Puppeteer 渲染服务设计。
+                            </p>
                         </div>
                     </div>
 
@@ -259,17 +279,30 @@ const result = await fetch('/plugin/napcat-plugin-checkin/api/checkin/groups/123
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                         如果你在使用过程中遇到问题，或有功能建议，欢迎通过以下方式反馈：
                     </p>
-                    <a
-                        href="https://github.com/MY-Final/napcat-plugin-checkin"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-                        </svg>
-                        GitHub 仓库
-                    </a>
+                    <div className="flex flex-wrap gap-3">
+                        <a
+                            href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=myZ-6WbZkavmF1KWGNdTQ8SpbVAi_hjY&authKey=qytWUv7F5XBh18%2FbyLreigwR3QzfSh9nKPu3anwOdcoOqPyzZOavROvPNGdLmq8V&noverify=0&group_code=1072957415"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#12B7F5] hover:bg-[#0ea5e0] text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.97 1.25-5.57 3.67-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.05-.49-.83-.27-1.49-.42-1.43-.88.03-.25.35-.51.96-.78 3.76-1.64 6.27-2.72 7.53-3.26 3.58-1.49 4.33-1.75 4.81-1.76.11 0 .35.03.51.16.13.11.17.26.18.38-.01.08-.01.19-.02.33z"/>
+                            </svg>
+                            QQ群（1072957415）
+                        </a>
+                        <a
+                            href="https://github.com/MY-Final/napcat-plugin-checkin"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015-2.895-.015-3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                            </svg>
+                            GitHub 仓库
+                        </a>
+                    </div>
                 </div>
             </section>
         </div>
