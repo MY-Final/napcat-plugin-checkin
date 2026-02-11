@@ -1,3 +1,5 @@
+![napcat-plugin-checkin](https://count.getloli.com/@MY-Final_napcat-plugin-checkin?name=napcat-plugin-checkin&theme=minecraft&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
+
 # NapCat 签到插件
 
 [![Version](https://img.shields.io/github/v/release/MY-Final/napcat-plugin-checkin)](https://github.com/MY-Final/napcat-plugin-checkin/releases)
