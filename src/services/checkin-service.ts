@@ -342,6 +342,7 @@ export async function performCheckin(
             success: true,
             isFirstTime,
             userData: globalUserData,
+            groupUserData: groupId ? groupUsers.get(userId) : undefined, // 返回群内数据（如果有）
             earnedPoints: groupId ? groupPoints : globalPoints, // 群内签到返回群内积分，否则返回全局积分
             todayRank: groupRank,
             checkinTime: currentTime,

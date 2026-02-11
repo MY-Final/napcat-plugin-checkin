@@ -260,6 +260,8 @@ export interface CheckinResult {
     isFirstTime: boolean;
     /** 用户数据（全局） */
     userData: UserCheckinData;
+    /** 群内用户数据（仅群内签到时返回） */
+    groupUserData?: GroupUserCheckinData;
     /** 本次获得积分 */
     earnedPoints: number;
     /** 今日排名（群内或全局） */

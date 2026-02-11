@@ -121,13 +121,18 @@ export async function handleCheckinCommand(
         }
 
         // 生成签到卡片
+        // 如果在群内签到，显示群内累计积分；否则显示全局积分
+        const displayTotalPoints = groupId && result.groupUserData 
+            ? result.groupUserData.totalPoints 
+            : result.userData.totalPoints;
+        
         const cardData: CheckinCardData = {
             nickname: result.userData.nickname,
             userId: result.userData.userId,
             avatarUrl: getAvatarUrl(userId),
             earnedPoints: result.earnedPoints,
             totalDays: result.userData.totalCheckinDays,
-            totalPoints: result.userData.totalPoints,
+            totalPoints: displayTotalPoints,
             todayRank: result.todayRank,
             checkinTime: result.checkinTime,
             currentDate: getCurrentDateStr(),
