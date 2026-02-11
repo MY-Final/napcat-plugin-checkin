@@ -50,6 +50,20 @@ export interface GroupConfig {
 }
 
 /**
+ * 签到刷新时间配置
+ */
+export interface CheckinRefreshTimeConfig {
+    /** 每日刷新时间（小时，0-23） */
+    hour: number;
+    /** 每日刷新时间（分钟，0-59） */
+    minute: number;
+    /** 签到周期类型：daily=每日, weekly=每周, monthly=每月 */
+    cycleType: 'daily' | 'weekly' | 'monthly';
+    /** 周期内可签到次数（1=每天/每周/每月只能打1次，2=每天/每周/每月能打2次，以此类推） */
+    cycleCount: number;
+}
+
+/**
  * 插件主配置接口
  */
 export interface PluginConfig {
@@ -73,6 +87,8 @@ export interface PluginConfig {
     checkinReplyMode: 'text' | 'image' | 'auto';
     /** 自定义 HTML 模板（可选） */
     customHtmlTemplate?: string;
+    /** 签到刷新时间配置 */
+    checkinRefreshTime: CheckinRefreshTimeConfig;
 }
 
 /**

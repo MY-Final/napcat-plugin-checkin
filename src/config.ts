@@ -26,6 +26,12 @@ export const DEFAULT_CONFIG: PluginConfig = {
         weekendBonus: 5,
         specialDays: [],
     },
+    checkinRefreshTime: {
+        hour: 0,
+        minute: 0,
+        cycleType: 'daily',
+        cycleCount: 1,
+    },
 };
 
 /**
@@ -73,5 +79,17 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
         ctx.NapCatConfig.plainText('🌟 周末加成'),
         ctx.NapCatConfig.boolean('checkinPoints.enableWeekendBonus', '启用周末加成', false, '是否在周末给予额外加成'),
         ctx.NapCatConfig.number('checkinPoints.weekendBonus', '周末加成点数', 5, '周末签到的额外加成积分'),
+
+        // 签到时间设置
+        ctx.NapCatConfig.plainText(' '),
+        ctx.NapCatConfig.plainText('签到时间设置'),
+        ctx.NapCatConfig.number('checkinRefreshTime.hour', '每日刷新时间（小时）', 0, '每天几点开始算新的一天（0-23），默认0点'),
+        ctx.NapCatConfig.number('checkinRefreshTime.minute', '每日刷新时间（分钟）', 0, '每天几分开始算新的一天（0-59），默认0分'),
+        ctx.NapCatConfig.select('checkinRefreshTime.cycleType', '签到周期类型', [
+            { label: '每日', value: 'daily' },
+            { label: '每周', value: 'weekly' },
+            { label: '每月', value: 'monthly' },
+        ], 'daily', '设置签到周期'),
+        ctx.NapCatConfig.number('checkinRefreshTime.cycleCount', '周期内可签到次数', 1, '每个周期内可以签到的次数（1=每天1次，2=每天2次等）'),
     );
 }

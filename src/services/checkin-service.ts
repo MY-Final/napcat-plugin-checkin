@@ -28,10 +28,127 @@ let dailyStatsCache: Map<string, DailyCheckinStats> = new Map();  // 按群存�
 let groupUsersCache: Map<string, Map<string, GroupUserCheckinData>> = new Map(); // 群用户缓存
 
 /**
- * 获取今天的日期字符串 YYYY-MM-DD
+ * 获取今天的日期字符串 YYYY-MM-DD（基于配置的刷新时间）
  */
 function getTodayStr(): string {
-    return new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const config = pluginState.config.checkinRefreshTime;
+    
+    // 创建刷新时间点（今天）
+    const refreshTime = new Date(now);
+    refreshTime.setHours(config.hour, config.minute, 0, 0);
+    
+    // 如果当前时间小于刷新时间，说明还在上一个周期
+    if (now < refreshTime) {
+        // 返回昨天的日期
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return yesterday.toISOString().split('T')[0];
+    }
+    
+    // 返回今天的日期
+    return now.toISOString().split('T')[0];
+}
+
+/**
+ * 获取当前周期标识（用于 weekly/monthly 周期判断）
+ */
+function getCycleIdentifier(): string {
+    const now = new Date();
+    const config = pluginState.config.checkinRefreshTime;
+    const cycleType = config.cycleType || 'daily';
+    
+    // 根据周期类型返回不同的标识
+    switch (cycleType) {
+        case 'weekly': {
+            // 返回年份-周数
+            const weekStart = new Date(now);
+            const dayOfWeek = now.getDay();
+            const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // 调整到周一
+            weekStart.setDate(diff);
+            return `${weekStart.getFullYear()}-W${getWeekNumber(weekStart)}`;
+        }
+        case 'monthly': {
+            // 返回年份-月份
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+        case 'daily':
+        default: {
+            // 使用日期字符串
+            return getTodayStr();
+        }
+    }
+}
+
+/**
+ * 获取周数
+ */
+function getWeekNumber(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+/**
+ * 检查今天是否还可以签到
+ */
+function canCheckinToday(userId: string, groupId: string | undefined, todayStr: string): { canCheckin: boolean; checkedInCount: number } {
+    // 加载全局数据
+    const globalUsers = loadGlobalUsersData();
+    const globalUserData = globalUsers.get(userId);
+    
+    // 如果是 daily 周期，按日期判断
+    if (pluginState.config.checkinRefreshTime.cycleType === 'daily') {
+        const globalCheckinCount = globalUserData?.lastCheckinDate === todayStr ? 1 : 0;
+        const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
+        
+        return {
+            canCheckin: globalCheckinCount < maxCount,
+            checkedInCount: globalCheckinCount
+        };
+    }
+    
+    // weekly/monthly 周期需要统计本周期内签到次数
+    const cycleId = getCycleIdentifier();
+    const checkinHistory = globalUserData?.checkinHistory || [];
+    const cycleCheckinCount = checkinHistory.filter(record => {
+        const recordDate = new Date(record.date);
+        return getCycleIdentifierForDate(recordDate) === cycleId;
+    }).length;
+    
+    const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
+    
+    return {
+        canCheckin: cycleCheckinCount < maxCount,
+        checkedInCount: cycleCheckinCount
+    };
+}
+
+/**
+ * 获取指定日期的周期标识
+ */
+function getCycleIdentifierForDate(date: Date): string {
+    const config = pluginState.config.checkinRefreshTime;
+    const cycleType = config.cycleType || 'daily';
+    
+    switch (cycleType) {
+        case 'weekly': {
+            const weekStart = new Date(date);
+            const dayOfWeek = date.getDay();
+            const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            weekStart.setDate(diff);
+            return `${weekStart.getFullYear()}-W${getWeekNumber(weekStart)}`;
+        }
+        case 'monthly': {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+        case 'daily':
+        default: {
+            return date.toISOString().split('T')[0];
+        }
+    }
 }
 
 /**
@@ -172,7 +289,32 @@ export async function performCheckin(
         const today = getTodayStr();
         const currentTime = getCurrentTimeStr();
         
-        // 1. 检查群内是否已经签到（如果指定了群）
+        // 1. 检查今天是否还可以签到（基于周期配置）
+        const checkinStatus = canCheckinToday(userId, groupId, today);
+        const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
+        
+        if (!checkinStatus.canCheckin) {
+            const globalUsers = loadGlobalUsersData();
+            const globalUserData = globalUsers.get(userId);
+            const cycleTypeText = {
+                'daily': '今天',
+                'weekly': '本周',
+                'monthly': '本月'
+            }[pluginState.config.checkinRefreshTime.cycleType] || '今天';
+            
+            return {
+                success: false,
+                isFirstTime: false,
+                userData: globalUserData!,
+                earnedPoints: 0,
+                todayRank: 0,
+                checkinTime: currentTime,
+                consecutiveDays: globalUserData?.consecutiveDays || 0,
+                error: `${cycleTypeText}已经签到${maxCount}次了，${cycleTypeText}再来吧~`,
+            };
+        }
+        
+        // 2. 检查群内是否已经签到（如果指定了群）
         if (groupId) {
             const groupUsers = loadGroupUsersData(groupId);
             const groupUserData = groupUsers.get(userId);
@@ -191,21 +333,37 @@ export async function performCheckin(
             }
         }
         
-        // 2. 加载全局数据（全服排行用）
+        // 3. 加载全局数据（全服排行用）
         const globalUsers = loadGlobalUsersData();
         let globalUserData = globalUsers.get(userId);
         
-        // 3. 检查今天是否已经在全局签到过
+        // 4. 检查今天是否已经在全局签到过
         const hasCheckedInToday = globalUserData && globalUserData.lastCheckinDate === today;
         
-        // 4. 计算连续签到天数（全局）
+        // 5. 计算连续签到天数（全局）
         let globalConsecutiveDays = 1;
         if (globalUserData && globalUserData.lastCheckinDate) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const config = pluginState.config.checkinRefreshTime;
             
-            if (globalUserData.lastCheckinDate === yesterdayStr) {
+            // 计算上一个周期的日期
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            // 如果今天已经过了刷新时间，昨天就是上一个周期；否则前天才是上一个周期
+            const currentRefreshTime = new Date(now);
+            currentRefreshTime.setHours(config.hour, config.minute, 0, 0);
+            
+            let previousCycleDate = yesterday;
+            if (now < currentRefreshTime) {
+                // 当前时间还没到今天的刷新时间，说明昨天是上一个周期
+                previousCycleDate = new Date(yesterday);
+                previousCycleDate.setDate(previousCycleDate.getDate() - 1);
+            }
+            
+            const previousCycleStr = previousCycleDate.toISOString().split('T')[0];
+            
+            if (globalUserData.lastCheckinDate === previousCycleStr) {
                 globalConsecutiveDays = globalUserData.consecutiveDays + 1;
             } else if (hasCheckedInToday) {
                 // 今天已经签到过，保持原有连续天数
@@ -286,11 +444,25 @@ export async function performCheckin(
             // 计算群内连续签到
             let groupConsecutiveDays = 1;
             if (groupUserData && groupUserData.lastCheckinDate) {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayStr = yesterday.toISOString().split('T')[0];
+                const config = pluginState.config.checkinRefreshTime;
                 
-                if (groupUserData.lastCheckinDate === yesterdayStr) {
+                // 计算上一个周期的日期（考虑刷新时间）
+                const now = new Date();
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                const currentRefreshTime = new Date(now);
+                currentRefreshTime.setHours(config.hour, config.minute, 0, 0);
+                
+                let previousCycleDate = yesterday;
+                if (now < currentRefreshTime) {
+                    previousCycleDate = new Date(yesterday);
+                    previousCycleDate.setDate(previousCycleDate.getDate() - 1);
+                }
+                
+                const previousCycleStr = previousCycleDate.toISOString().split('T')[0];
+                
+                if (groupUserData.lastCheckinDate === previousCycleStr) {
                     groupConsecutiveDays = groupUserData.consecutiveDays + 1;
                 }
             }

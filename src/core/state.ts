@@ -48,7 +48,16 @@ function sanitizeConfig(raw: unknown): PluginConfig {
         }
     }
 
-    // TODO: 在这里添加你的配置项清洗逻辑
+    // 签到刷新时间配置清洗
+    if (isObject(raw.checkinRefreshTime)) {
+        const refreshTime = raw.checkinRefreshTime;
+        if (typeof refreshTime.hour === 'number') out.checkinRefreshTime.hour = Math.max(0, Math.min(23, refreshTime.hour));
+        if (typeof refreshTime.minute === 'number') out.checkinRefreshTime.minute = Math.max(0, Math.min(59, refreshTime.minute));
+        if (typeof refreshTime.cycleType === 'string' && ['daily', 'weekly', 'monthly'].includes(refreshTime.cycleType)) {
+            out.checkinRefreshTime.cycleType = refreshTime.cycleType as 'daily' | 'weekly' | 'monthly';
+        }
+        if (typeof refreshTime.cycleCount === 'number') out.checkinRefreshTime.cycleCount = Math.max(1, refreshTime.cycleCount);
+    }
 
     return out;
 }
