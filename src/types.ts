@@ -300,4 +300,22 @@ export interface CheckinCardData {
     currentDate: string;
     /** 励志短句 */
     quote: string;
+    /** 连续签到天数 */
+    consecutiveDays: number;
+    /** 星期几（0-6，0=周日） */
+    weekday: number;
+    /** 星期几（中文：周日、周一...） */
+    weekdayName: string;
+    /** 是否周末 */
+    isWeekend: boolean;
+    /** 群名称（仅群内签到） */
+    groupName?: string;
+    /** 活跃天数 */
+    activeDays: number;
+    /** 本次基础积分（不含加成） */
+    basePoints: number;
+    /** 连续签到加成 */
+    consecutiveBonus: number;
+    /** 周末加成 */
+    weekendBonus: number;
 }

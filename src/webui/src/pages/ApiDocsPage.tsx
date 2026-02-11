@@ -334,6 +334,15 @@ const TEMPLATE_VARIABLES = [
   { name: '{{checkinTime}}', description: '签到时间' },
   { name: '{{currentDate}}', description: '当前日期' },
   { name: '{{quote}}', description: '随机寄语' },
+  { name: '{{consecutiveDays}}', description: '连续签到天数' },
+  { name: '{{weekday}}', description: '星期几（0-6数字）' },
+  { name: '{{weekdayName}}', description: '星期几（中文：周一...周日）' },
+  { name: '{{isWeekend}}', description: '是否周末（true/false）' },
+  { name: '{{groupName}}', description: '群名称（群内签到时显示）' },
+  { name: '{{activeDays}}', description: '活跃天数（使用次数）' },
+  { name: '{{basePoints}}', description: '本次基础积分（不含加成）' },
+  { name: '{{consecutiveBonus}}', description: '连续签到加成' },
+  { name: '{{weekendBonus}}', description: '周末加成' },
 ]
 
 function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {

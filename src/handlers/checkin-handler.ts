@@ -122,10 +122,16 @@ export async function handleCheckinCommand(
 
         // 生成签到卡片
         // 如果在群内签到，显示群内累计积分；否则显示全局积分
-        const displayTotalPoints = groupId && result.groupUserData 
-            ? result.groupUserData.totalPoints 
+        const displayTotalPoints = groupId && result.groupUserData
+            ? result.groupUserData.totalPoints
             : result.userData.totalPoints;
-        
+
+        // 获取当前日期信息
+        const now = new Date();
+        const weekday = now.getDay();
+        const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const isWeekend = weekday === 0 || weekday === 6;
+
         const cardData: CheckinCardData = {
             nickname: result.userData.nickname,
             userId: result.userData.userId,
@@ -137,6 +143,15 @@ export async function handleCheckinCommand(
             checkinTime: result.checkinTime,
             currentDate: getCurrentDateStr(),
             quote: getRandomQuote(),
+            consecutiveDays: result.consecutiveDays,
+            weekday: weekday,
+            weekdayName: weekdayNames[weekday],
+            isWeekend: isWeekend,
+            groupName: groupName || undefined,
+            activeDays: result.userData.activeDays || 0,
+            basePoints: result.breakdown?.base || result.earnedPoints,
+            consecutiveBonus: result.breakdown?.consecutiveBonus || 0,
+            weekendBonus: result.breakdown?.weekendBonus || 0,
         };
 
         // 根据配置决定发送图片还是文字
