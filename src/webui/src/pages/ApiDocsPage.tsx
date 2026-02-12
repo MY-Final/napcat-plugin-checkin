@@ -7,6 +7,7 @@ interface ApiEndpoint {
   path: string
   title: string
   description: string
+  authRequired?: boolean
   params?: ApiParam[]
   response?: string
   example?: string
@@ -118,6 +119,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/groups/:id/config',
     title: '更新群配置',
+    authRequired: true,
     description: '更新指定群的配置（启用状态、签到开关）',
     params: [
       { name: 'enabled', type: 'boolean', required: false, description: '是否启用此群' },
@@ -136,6 +138,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/groups/bulk-config',
     title: '批量更新群配置',
+    authRequired: true,
     description: '批量更新多个群的配置',
     params: [
       { name: 'enabled', type: 'boolean', required: true, description: '是否启用' },
@@ -351,6 +354,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/checkin/groups/:groupId/users/:userId/points',
     title: '修改用户积分',
+    authRequired: true,
     description: '增加或减少用户的群内积分（用于兑换奖励等场景）',
     params: [
       { name: 'points', type: 'number', required: true, description: '变更积分（正数增加，负数减少）' },
@@ -410,6 +414,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/checkin/groups/:groupId/users/:userId/points/reset',
     title: '重置用户积分',
+    authRequired: true,
     description: '将用户积分重置为0（谨慎使用，会记录操作日志）',
     params: [
       { name: 'description', type: 'string', required: false, description: '重置原因说明' },
@@ -710,6 +715,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/logs/config/:groupId',
     title: '更新群日志配置',
+    authRequired: true,
     description: '更新指定群组的日志配置',
     params: [
       { name: 'enabled', type: 'boolean', required: false, description: '是否启用日志' },
@@ -731,6 +737,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/logs/cleanup',
     title: '删除过期日志',
+    authRequired: true,
     description: '删除超过指定天数的过期日志',
     params: [
       { name: 'days', type: 'number', required: true, description: '删除多少天前的日志' },
@@ -745,6 +752,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/v1/groups/:groupId/users/:userId/award',
     title: '奖励积分（v1）',
+    authRequired: true,
     description: '奖励积分给用户（双轨制积分系统）',
     params: [
       { name: 'amount', type: 'number', required: true, description: '奖励积分数量（正数）' },
@@ -781,6 +789,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/v1/groups/:groupId/users/:userId/consume',
     title: '消费积分（v1）',
+    authRequired: true,
     description: '消费用户积分（双轨制积分系统，需提供幂等键）',
     params: [
       { name: 'amount', type: 'number', required: true, description: '消费积分数量（正数）' },
@@ -938,6 +947,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/v1/groups/:groupId/users/:userId/titles/equip',
     title: '佩戴称号（v1）',
+    authRequired: true,
     description: '为用户佩戴称号',
     params: [
       { name: 'titleId', type: 'string', required: true, description: '称号ID' },
@@ -1336,7 +1346,7 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden mb-4">
+    <div className={`border rounded-xl overflow-hidden mb-4 ${endpoint.authRequired ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'}`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full px-6 py-4 flex items-center justify-between bg-white dark:bg-[#1a1b1d] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -1351,6 +1361,11 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
           </span>
           <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{endpoint.path}</span>
           <span className="text-sm font-medium text-gray-900 dark:text-white">{endpoint.title}</span>
+          {endpoint.authRequired && (
+            <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 font-medium">
+              需鉴权
+            </span>
+          )}
         </div>
         <svg
           className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -1364,6 +1379,22 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
 
       {isExpanded && (
         <div className="px-6 py-4 bg-gray-50 dark:bg-[#0f0f10] border-t border-gray-200 dark:border-gray-800">
+          {endpoint.authRequired && (
+            <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span className="font-medium text-orange-700 dark:text-orange-400">此接口需要鉴权</span>
+              </div>
+              <p className="text-sm text-orange-600 dark:text-orange-300">
+                调用此接口需要在请求头中携带认证信息：
+              </p>
+              <pre className="mt-2 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 p-2 rounded text-xs overflow-x-auto">
+{`Authorization: Bearer <your-token>`}
+              </pre>
+            </div>
+          )}
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{endpoint.description}</p>
 
           {endpoint.params && endpoint.params.length > 0 && (
@@ -1570,7 +1601,7 @@ export default function ApiDocsPage() {
                   )}
                 </button>
                 
-                {section.id !== 'quickstart' && expandedSection === section.id && (
+                  {section.id !== 'quickstart' && expandedSection === section.id && (
                   <div className="ml-3 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
                     {getEndpointsForNav(section.id).map(endpoint => (
                       <button
@@ -1589,7 +1620,12 @@ export default function ApiDocsPage() {
                         }`}>
                           {endpoint.method}
                         </span>
-                        <span className="truncate">{endpoint.title}</span>
+                        <span className="truncate flex-1">{endpoint.title}</span>
+                        {endpoint.authRequired && (
+                          <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -1729,6 +1765,11 @@ const previewRes = await fetch('http://localhost:6099/plugin/napcat-plugin-check
                         {endpoint.method}
                       </span>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{endpoint.title}</h2>
+                      {endpoint.authRequired && (
+                        <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 font-medium">
+                          需鉴权
+                        </span>
+                      )}
                     </div>
                     <p className="text-gray-600 dark:text-gray-400">{endpoint.description}</p>
                   </div>
