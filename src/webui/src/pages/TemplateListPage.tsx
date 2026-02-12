@@ -727,6 +727,16 @@ export default function TemplateListPage() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation()
+                                                    handleSelectTemplate(template)
+                                                    setIsEditing(true)
+                                                }}
+                                                className="px-2 py-1 text-xs text-gray-500 hover:text-brand-500 transition-colors"
+                                            >
+                                                编辑
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
                                                     handleSetDefault(template.id)
                                                 }}
                                                 className="px-2 py-1 text-xs text-gray-500 hover:text-brand-500 transition-colors"

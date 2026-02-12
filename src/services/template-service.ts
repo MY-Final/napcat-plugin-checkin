@@ -180,7 +180,7 @@ export function getTemplateForSend(type: TemplateType): TemplateData | null {
             return template;
         }
     }
-    
+
     const defaultId = type === 'checkin' ? config.defaultCheckinTemplateId : config.defaultLeaderboardTemplateId;
     if (defaultId) {
         const template = getTemplateById(defaultId);
@@ -188,8 +188,8 @@ export function getTemplateForSend(type: TemplateType): TemplateData | null {
             return template;
         }
     }
-    
-    return getRandomTemplate(type);
+
+    return null;
 }
 
 export function setDefaultTemplate(id: string): boolean {
