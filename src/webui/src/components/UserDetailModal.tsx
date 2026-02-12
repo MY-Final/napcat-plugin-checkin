@@ -6,17 +6,18 @@ import type { UserCheckinData } from '../types'
 interface UserDetailModalProps {
   userId: string
   nickname: string
+  groupId?: string
   onClose: () => void
 }
 
-export default function UserDetailModal({ userId, nickname, onClose }: UserDetailModalProps) {
+export default function UserDetailModal({ userId, nickname, groupId, onClose }: UserDetailModalProps) {
   const [userData, setUserData] = useState<UserCheckinData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const res = await getUserCheckinData(userId)
+        const res = await getUserCheckinData(userId, groupId)
         if (res.code === 0 && res.data) {
           setUserData(res.data)
         }
@@ -27,7 +28,7 @@ export default function UserDetailModal({ userId, nickname, onClose }: UserDetai
       }
     }
     fetchUserData()
-  }, [userId])
+  }, [userId, groupId])
 
   // 获取最近签到记录
   const getLastCheckin = () => {
@@ -96,17 +97,27 @@ export default function UserDetailModal({ userId, nickname, onClose }: UserDetai
             ) : userData ? (
               <>
                 {/* 统计卡片 */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
                     <div className="text-lg font-bold text-brand-500">{userData.totalPoints}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">累计积分</div>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-green-500">{userData.totalCheckinDays}</div>
+                    <div className="text-lg font-bold text-green-500">{userData.balance || 0}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">总余额</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-blue-500">{userData.totalCheckinDays}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">签到天数</div>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-blue-500">{userData.activeDays || 0}</div>
+                    <div className="text-lg font-bold text-purple-500">{userData.consecutiveDays}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">连续签到</div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-orange-500">{userData.activeDays || 0}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">活跃天数</div>
                   </div>
                 </div>

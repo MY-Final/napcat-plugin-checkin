@@ -544,8 +544,10 @@ export interface GroupUserInfo {
     userId: string;
     /** 用户昵称 */
     nickname: string;
-    /** 在群内的累计积分 */
+    /** 在群内的累计积分（经验值） */
     groupPoints: number;
+    /** 在群内的可用余额 */
+    balance: number;
     /** 在群内的签到次数 */
     groupCheckinDays: number;
     /** 最后签到日期 */

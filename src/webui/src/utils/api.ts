@@ -1,4 +1,4 @@
-import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats, UserCheckinData, LeaderboardData, LeaderboardType } from '../types'
+import type { ApiResponse, RankingData, ActiveRankingData, CheckinStats, GroupCheckinStats, UserCheckinData, LeaderboardData, LeaderboardType, UserBalanceData } from '../types'
 
 function resolvePluginName(): string {
     if (window.__PLUGIN_NAME__) return window.__PLUGIN_NAME__
@@ -77,9 +77,15 @@ export async function getActiveRanking(): Promise<ApiResponse<ActiveRankingData>
     return noAuthFetch('/checkin/active-ranking')
 }
 
-/** 获取用户签到数据 */
-export async function getUserCheckinData(userId: string): Promise<ApiResponse<UserCheckinData>> {
-    return noAuthFetch(`/checkin/user/${userId}`)
+/** 获取用户签到数据（可选指定群） */
+export async function getUserCheckinData(userId: string, groupId?: string): Promise<ApiResponse<UserCheckinData>> {
+    const query = groupId ? `?groupId=${groupId}` : ''
+    return noAuthFetch(`/checkin/user/${userId}${query}`)
+}
+
+/** 获取用户分群余额详情 */
+export async function getUserBalanceData(userId: string): Promise<ApiResponse<UserBalanceData>> {
+    return noAuthFetch(`/checkin/user/${userId}/balance`)
 }
 
 /** 获取签到统计 */

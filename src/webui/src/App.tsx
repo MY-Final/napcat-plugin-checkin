@@ -13,10 +13,11 @@ import CheckinDataPage from './pages/CheckinDataPage'
 import TemplatePage from './pages/TemplatePage'
 import LeaderboardTemplatePage from './pages/LeaderboardTemplatePage'
 import ApiDocsPage from './pages/ApiDocsPage'
+import BalancePage from './pages/BalancePage'
 import { useStatus } from './hooks/useStatus'
 import { useTheme } from './hooks/useTheme'
 
-export type PageId = 'status' | 'help' | 'config' | 'groups' | 'leaderboard' | 'points-ranking' | 'active-ranking' | 'checkin' | 'template' | 'leaderboard-template' | 'apidocs'
+export type PageId = 'status' | 'help' | 'config' | 'groups' | 'leaderboard' | 'points-ranking' | 'active-ranking' | 'checkin' | 'balance' | 'template' | 'leaderboard-template' | 'apidocs'
 
 const pageConfig: Record<PageId, { title: string; desc: string }> = {
     status: { title: '仪表盘', desc: '插件运行状态与数据概览' },
@@ -27,6 +28,7 @@ const pageConfig: Record<PageId, { title: string; desc: string }> = {
     'points-ranking': { title: '积分排行', desc: '查看全服积分排行榜' },
     'active-ranking': { title: '活跃排行', desc: '查看全服活跃排行榜（识别忠实用户）' },
     checkin: { title: '分群排行', desc: '查看各群的签到排行' },
+    balance: { title: '我的余额', desc: '查看用户在各群的余额详情' },
     template: { title: '模板编辑', desc: '自定义签到卡片 HTML 模板' },
     'leaderboard-template': { title: '排行榜模板', desc: '自定义排行榜卡片 HTML 模板' },
     apidocs: { title: '接口文档', desc: 'API 接口文档与调用参考' }
@@ -59,6 +61,7 @@ function App() {
             case 'points-ranking': return <PointsRankingPage />
             case 'active-ranking': return <ActiveRankingPage />
             case 'checkin': return <CheckinDataPage />
+            case 'balance': return <BalancePage />
             case 'template': return <TemplatePage />
             case 'leaderboard-template': return <LeaderboardTemplatePage />
             case 'apidocs': return <ApiDocsPage />

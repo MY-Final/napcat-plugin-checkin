@@ -946,6 +946,7 @@ export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
             userId,
             nickname: userData.nickname,
             groupPoints: userData.totalExp,
+            balance: userData.balance,
             groupCheckinDays: userData.totalCheckinDays,
             lastCheckinDate: userData.lastCheckinDate,
         });

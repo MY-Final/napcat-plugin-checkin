@@ -19,7 +19,7 @@ export default function PointsRankingPage() {
                 setStats(statsRes.data)
             }
 
-            // 获取积分排行
+            // 获取活跃排行
             const rankingRes = await getRanking()
             if (rankingRes.code === 0 && rankingRes.data) {
                 setRanking(rankingRes.data.ranking)
@@ -39,7 +39,7 @@ export default function PointsRankingPage() {
         <div className="space-y-6">
             {/* 统计概览卡片 */}
             {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">总用户数</div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalUsers}</div>
@@ -47,10 +47,6 @@ export default function PointsRankingPage() {
                     <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">总签到次数</div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCheckins}</div>
-                    </div>
-                    <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
-                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">总积分</div>
-                        <div className="text-2xl font-bold text-brand-500">{stats.totalPoints.toLocaleString()}</div>
                     </div>
                     <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">今日签到</div>
@@ -74,12 +70,12 @@ export default function PointsRankingPage() {
                 </button>
             </div>
 
-            {/* 积分排行表格 */}
+            {/* 活跃排行表格 */}
             <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">全服积分排行 TOP100</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">全服活跃排行 TOP100</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        按累计积分排序，积分越高说明运气越好或签到越积极
+                        按参与的群数量排序，每人只算一次，反映用户的活跃程度
                     </p>
                 </div>
                 <div className="overflow-x-auto">
@@ -88,10 +84,9 @@ export default function PointsRankingPage() {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">排名</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">用户</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">总积分</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">活跃群数</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">签到天数</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">连续签到</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">最后签到</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">最后活跃</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -128,22 +123,19 @@ export default function PointsRankingPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm font-bold text-brand-500">{user.totalPoints.toLocaleString()}</span>
+                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                            user.activeDays >= 5 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                                            user.activeDays >= 3 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                        }`}>
+                                            {user.activeDays} 群
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {user.totalCheckinDays} 天
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                            user.consecutiveDays >= 7 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                            user.consecutiveDays >= 3 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        }`}>
-                                            {user.consecutiveDays} 天
-                                        </span>
-                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {user.lastCheckinDate}
+                                        {user.lastActiveDate}
                                     </td>
                                 </tr>
                             ))}

@@ -81,16 +81,17 @@ export interface ApiResponse<T = unknown> {
 export interface UserRanking {
     userId: string
     nickname: string
-    totalPoints: number
+    activeDays: number
     totalCheckinDays: number
-    consecutiveDays: number
-    lastCheckinDate: string
+    lastActiveDate: string
+    firstGroupId: string
 }
 
 export interface GroupUserInfo {
     userId: string
     nickname: string
     groupPoints: number
+    balance: number
     groupCheckinDays: number
     lastCheckinDate: string
 }
@@ -107,8 +108,6 @@ export interface GroupCheckinStats {
 export interface CheckinStats {
     totalUsers: number
     totalCheckins: number
-    totalPoints: number
-    totalActiveDays: number
     todayCheckins: number
     activeUsers: number
 }
@@ -150,10 +149,27 @@ export interface UserCheckinData {
     totalCheckinDays: number
     consecutiveDays: number
     totalPoints: number
+    balance?: number
     lastCheckinDate: string
     checkinHistory: CheckinRecord[]
     activeDays?: number
     lastActiveDate?: string
+}
+
+// ==================== 余额类型 ====================
+
+export interface GroupBalance {
+    groupId: string
+    groupName?: string
+    balance: number
+    totalExp: number
+    totalCheckinDays: number
+}
+
+export interface UserBalanceData {
+    userId: string
+    groupCount: number
+    groups: GroupBalance[]
 }
 
 // ==================== 排行榜类型 ====================

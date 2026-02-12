@@ -39,7 +39,7 @@ export default function ActiveRankingPage() {
         <div className="space-y-6">
             {/* 统计概览卡片 */}
             {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">总用户数</div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalUsers}</div>
@@ -47,10 +47,6 @@ export default function ActiveRankingPage() {
                     <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">总签到次数</div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCheckins}</div>
-                    </div>
-                    <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
-                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">总活跃天数</div>
-                        <div className="text-2xl font-bold text-green-500">{stats.totalActiveDays.toLocaleString()}</div>
                     </div>
                     <div className="bg-white dark:bg-[#1a1b1d] rounded-xl p-5 border border-gray-200 dark:border-gray-800">
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">今日签到</div>

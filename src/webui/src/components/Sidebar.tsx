@@ -15,6 +15,7 @@ const menuItems: { id: PageId; label: string; icon: React.ReactNode }[] = [
     { id: 'points-ranking', label: '积分排行', icon: <IconTrophy size={18} /> },
     { id: 'active-ranking', label: '活跃排行', icon: <IconActivity size={18} /> },
     { id: 'checkin', label: '分群排行', icon: <IconChart size={18} /> },
+    { id: 'balance', label: '我的余额', icon: <IconActivity size={18} /> },
     { id: 'template', label: '签到模板', icon: <IconTemplate size={18} /> },
     { id: 'leaderboard-template', label: '排行榜模板', icon: <IconTemplate size={18} /> },
     { id: 'apidocs', label: '接口文档', icon: <IconBook size={18} /> },

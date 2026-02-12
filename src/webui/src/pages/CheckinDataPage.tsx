@@ -9,7 +9,7 @@ export default function CheckinDataPage() {
     const [selectedGroup, setSelectedGroup] = useState<string>('')
     const [selectedGroupData, setSelectedGroupData] = useState<GroupCheckinStats | null>(null)
     const [loading, setLoading] = useState(false)
-    const [selectedUser, setSelectedUser] = useState<{ userId: string; nickname: string } | null>(null)
+    const [selectedUser, setSelectedUser] = useState<{ userId: string; nickname: string; groupId: string } | null>(null)
 
     const fetchData = async () => {
         setLoading(true)
@@ -150,6 +150,7 @@ export default function CheckinDataPage() {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">排名</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">用户</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">群内积分</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">余额</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">签到次数</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">最后签到</th>
                                 </tr>
@@ -171,7 +172,7 @@ export default function CheckinDataPage() {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div 
                                                 className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
-                                                onClick={() => setSelectedUser({ userId: user.userId, nickname: user.nickname })}
+                                                onClick={() => setSelectedUser({ userId: user.userId, nickname: user.nickname, groupId: selectedGroup })}
                                             >
                                                 <img
                                                     className="w-8 h-8 rounded-full mr-3 object-cover"
@@ -189,6 +190,9 @@ export default function CheckinDataPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-sm font-bold text-brand-500">{user.groupPoints.toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-sm font-bold text-green-500">{user.balance?.toLocaleString() || 0}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                             {user.groupCheckinDays} 次
@@ -223,6 +227,7 @@ export default function CheckinDataPage() {
                 <UserDetailModal
                     userId={selectedUser.userId}
                     nickname={selectedUser.nickname}
+                    groupId={selectedUser.groupId}
                     onClose={() => setSelectedUser(null)}
                 />
             )}

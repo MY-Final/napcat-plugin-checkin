@@ -7,14 +7,15 @@ import type {
     NapCatPluginContext,
 } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
-import { 
-    getUserCheckinData, 
-    getTodayCheckinCount, 
-    cleanupOldData, 
-    getAllUsersData, 
-    getGroupCheckinStats, 
-    getAllGroupsStats, 
-    getGroupAllUsersData, 
+import {
+    getUserCheckinData,
+    getGroupUserCheckinData,
+    getTodayCheckinCount,
+    cleanupOldData,
+    getAllUsersData,
+    getGroupCheckinStats,
+    getAllGroupsStats,
+    getGroupAllUsersData,
     getActiveRanking,
     getGroupUserPoints,
     updateGroupUserPoints,
@@ -27,6 +28,47 @@ import { LevelCoreService } from './level/level-core.service';
 import { TitleService } from './title/title.service';
 import { LEVEL_CONFIG, DEFAULT_TITLES } from '../config/level-config';
 import type { LeaderboardType } from '../types';
+import * as fs from 'fs';
+import * as path from 'path';
+
+/**
+ * 计算用户在所有群中的总余额
+ */
+function calculateUserTotalBalance(userId: string): number {
+    try {
+        const dataPath = pluginState.ctx.dataPath;
+        const GROUP_DATA_PREFIX = 'checkin-group-';
+        let totalBalance = 0;
+
+        if (!fs.existsSync(dataPath)) {
+            return 0;
+        }
+
+        const files = fs.readdirSync(dataPath);
+        const groupFiles = files.filter(file => file.startsWith(GROUP_DATA_PREFIX) && file.endsWith('.json'));
+
+        for (const file of groupFiles) {
+            const groupId = file.replace(GROUP_DATA_PREFIX, '').replace('.json', '');
+            if (!groupId || groupId === 'global') continue;
+
+            const filePath = path.join(dataPath, file);
+            try {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const data = JSON.parse(content);
+                if (data.users && data.users[userId]) {
+                    totalBalance += data.users[userId].balance || 0;
+                }
+            } catch {
+                // 忽略单个文件读取错误
+            }
+        }
+
+        return totalBalance;
+    } catch (error) {
+        pluginState.logger.error('计算用户总余额失败:', error);
+        return 0;
+    }
+}
 
 /**
  * 注册 API 路由
@@ -172,22 +214,111 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取指定用户签到数据 */
+    /** 获取指定用户签到数据（支持指定群） */
     router.getNoAuth('/checkin/user/:id', (req, res) => {
         try {
             const userId = req.params?.id;
+            const groupId = req.query?.groupId as string | undefined;
+
             if (!userId) {
                 return res.status(400).json({ code: -1, message: '缺少用户 ID' });
             }
 
-            const userData = getUserCheckinData(userId);
-            if (!userData) {
-                return res.json({ code: 0, data: null });
-            }
+            // 如果指定了群ID，返回该群的数据
+            if (groupId) {
+                const groupUserData = getGroupUserCheckinData(userId, groupId);
+                if (!groupUserData) {
+                    return res.json({ code: 0, data: null });
+                }
 
-            res.json({ code: 0, data: userData });
+                // 转换为前端兼容的格式
+                res.json({
+                    code: 0,
+                    data: {
+                        userId: groupUserData.userId,
+                        nickname: groupUserData.nickname,
+                        totalCheckinDays: groupUserData.totalCheckinDays,
+                        consecutiveDays: groupUserData.consecutiveDays,
+                        totalPoints: groupUserData.totalExp,
+                        balance: groupUserData.balance,
+                        lastCheckinDate: groupUserData.lastCheckinDate,
+                        checkinHistory: groupUserData.checkinHistory || [],
+                    },
+                });
+            } else {
+                // 返回全局数据
+                const userData = getUserCheckinData(userId);
+                if (!userData) {
+                    return res.json({ code: 0, data: null });
+                }
+
+                res.json({ code: 0, data: userData });
+            }
         } catch (err) {
             ctx.logger.error('获取用户签到数据失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 获取用户分群余额详情 */
+    router.getNoAuth('/checkin/user/:userId/balance', (req, res) => {
+        try {
+            const userId = req.params?.userId;
+            if (!userId) {
+                return res.status(400).json({ code: -1, message: '缺少用户 ID' });
+            }
+
+            const dataPath = pluginState.ctx.dataPath;
+            const GROUP_DATA_PREFIX = 'checkin-group-';
+            const groupBalances: Array<{
+                groupId: string;
+                groupName?: string;
+                balance: number;
+                totalExp: number;
+                totalCheckinDays: number;
+            }> = [];
+
+            if (fs.existsSync(dataPath)) {
+                const files = fs.readdirSync(dataPath);
+                const groupFiles = files.filter(file => file.startsWith(GROUP_DATA_PREFIX) && file.endsWith('.json'));
+
+                for (const file of groupFiles) {
+                    const groupId = file.replace(GROUP_DATA_PREFIX, '').replace('.json', '');
+                    if (!groupId || groupId === 'global') continue;
+
+                    const filePath = path.join(dataPath, file);
+                    try {
+                        const content = fs.readFileSync(filePath, 'utf-8');
+                        const data = JSON.parse(content);
+                        if (data.users && data.users[userId]) {
+                            const userData = data.users[userId];
+                            groupBalances.push({
+                                groupId,
+                                groupName: data.groupName,
+                                balance: userData.balance || 0,
+                                totalExp: userData.totalExp || 0,
+                                totalCheckinDays: userData.totalCheckinDays || 0,
+                            });
+                        }
+                    } catch {
+                        // 忽略单个文件读取错误
+                    }
+                }
+            }
+
+            // 按余额降序排序
+            groupBalances.sort((a, b) => b.balance - a.balance);
+
+            res.json({
+                code: 0,
+                data: {
+                    userId,
+                    groupCount: groupBalances.length,
+                    groups: groupBalances,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('获取用户分群余额失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });
@@ -205,26 +336,92 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取全服排行榜（按积分排序） */
+    /** 获取全服排行榜（按活跃天数排序，每人只算一次） */
     router.getNoAuth('/checkin/ranking', (_req, res) => {
         try {
-            const allUsers = getAllUsersData();
-            const sortedUsers = Array.from(allUsers.values())
-                .sort((a, b) => b.totalPoints - a.totalPoints)
+            const dataPath = pluginState.ctx.dataPath;
+            const GROUP_DATA_PREFIX = 'checkin-group-';
+            const userMap = new Map<string, {
+                userId: string;
+                nickname: string;
+                activeDays: number;
+                totalCheckinDays: number;
+                lastActiveDate: string;
+                firstGroupId: string;
+            }>();
+
+            if (fs.existsSync(dataPath)) {
+                const files = fs.readdirSync(dataPath);
+                const groupFiles = files.filter(file => file.startsWith(GROUP_DATA_PREFIX) && file.endsWith('.json'));
+
+                for (const file of groupFiles) {
+                    const groupId = file.replace(GROUP_DATA_PREFIX, '').replace('.json', '');
+                    if (!groupId || groupId === 'global') continue;
+
+                    const filePath = path.join(dataPath, file);
+                    try {
+                        const content = fs.readFileSync(filePath, 'utf-8');
+                        const data = JSON.parse(content);
+                        if (data.users) {
+                            for (const [userId, userData] of Object.entries(data.users)) {
+                                const user = userData as {
+                                    nickname: string;
+                                    totalCheckinDays: number;
+                                    lastCheckinDate: string;
+                                };
+                                
+                                // 如果用户已存在，累加签到天数，保留最早的记录
+                                if (userMap.has(userId)) {
+                                    const existing = userMap.get(userId)!;
+                                    existing.totalCheckinDays = Math.max(existing.totalCheckinDays, user.totalCheckinDays);
+                                    // 保留最早的活跃记录
+                                    if (user.lastCheckinDate < existing.lastActiveDate) {
+                                        existing.lastActiveDate = user.lastCheckinDate;
+                                        existing.firstGroupId = groupId;
+                                    }
+                                } else {
+                                    // 新用户，记录首次出现的群
+                                    userMap.set(userId, {
+                                        userId,
+                                        nickname: user.nickname,
+                                        activeDays: 1, // 每在一个群签到就算一个活跃群
+                                        totalCheckinDays: user.totalCheckinDays,
+                                        lastActiveDate: user.lastCheckinDate,
+                                        firstGroupId: groupId,
+                                    });
+                                }
+                            }
+                        }
+                    } catch {
+                        // 忽略单个文件读取错误
+                    }
+                }
+            }
+
+            // 按活跃天数排序（活跃天数越多排名越高）
+            const sortedUsers = Array.from(userMap.values())
+                .sort((a, b) => {
+                    // 先按活跃天数排序
+                    if (b.activeDays !== a.activeDays) {
+                        return b.activeDays - a.activeDays;
+                    }
+                    // 活跃天数相同，按总签到天数排序
+                    return b.totalCheckinDays - a.totalCheckinDays;
+                })
                 .slice(0, 100)
                 .map(user => ({
                     userId: user.userId,
                     nickname: user.nickname,
-                    totalPoints: user.totalPoints,
+                    activeDays: user.activeDays,
                     totalCheckinDays: user.totalCheckinDays,
-                    consecutiveDays: user.consecutiveDays,
-                    lastCheckinDate: user.lastCheckinDate,
+                    lastActiveDate: user.lastActiveDate,
+                    firstGroupId: user.firstGroupId,
                 }));
 
             res.json({
                 code: 0,
                 data: {
-                    totalUsers: allUsers.size,
+                    totalUsers: userMap.size,
                     ranking: sortedUsers,
                 },
             });
@@ -258,28 +455,71 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
     /** 获取所有签到统计数据 */
     router.getNoAuth('/checkin/stats', (_req, res) => {
         try {
-            const allUsers = getAllUsersData();
-            
-            // 计算统计数据
-            const totalUsers = allUsers.size;
-            const totalCheckins = Array.from(allUsers.values()).reduce((sum, user) => sum + user.totalCheckinDays, 0);
-            const totalPoints = Array.from(allUsers.values()).reduce((sum, user) => sum + user.totalPoints, 0);
-            const totalActiveDays = Array.from(allUsers.values()).reduce((sum, user) => sum + (user.activeDays || 0), 0);
-            const todayCheckins = getTodayCheckinCount();
-            
+            const dataPath = pluginState.ctx.dataPath;
+            const GROUP_DATA_PREFIX = 'checkin-group-';
+            const userMap = new Map<string, {
+                totalCheckinDays: number;
+                lastCheckinDate: string;
+            }>();
+            let totalCheckins = 0;
+            let todayCheckins = 0;
+            const today = new Date().toISOString().split('T')[0];
+
+            if (fs.existsSync(dataPath)) {
+                const files = fs.readdirSync(dataPath);
+                const groupFiles = files.filter(file => file.startsWith(GROUP_DATA_PREFIX) && file.endsWith('.json'));
+
+                for (const file of groupFiles) {
+                    const filePath = path.join(dataPath, file);
+                    try {
+                        const content = fs.readFileSync(filePath, 'utf-8');
+                        const data = JSON.parse(content);
+                        if (data.users) {
+                            for (const [userId, userData] of Object.entries(data.users)) {
+                                const user = userData as {
+                                    totalCheckinDays: number;
+                                    lastCheckinDate: string;
+                                };
+                                
+                                totalCheckins += user.totalCheckinDays;
+                                
+                                // 统计今日签到
+                                if (user.lastCheckinDate === today) {
+                                    todayCheckins++;
+                                }
+                                
+                                // 用户去重，保留最大签到天数
+                                if (userMap.has(userId)) {
+                                    const existing = userMap.get(userId)!;
+                                    existing.totalCheckinDays = Math.max(existing.totalCheckinDays, user.totalCheckinDays);
+                                    if (user.lastCheckinDate > existing.lastCheckinDate) {
+                                        existing.lastCheckinDate = user.lastCheckinDate;
+                                    }
+                                } else {
+                                    userMap.set(userId, {
+                                        totalCheckinDays: user.totalCheckinDays,
+                                        lastCheckinDate: user.lastCheckinDate,
+                                    });
+                                }
+                            }
+                        }
+                    } catch {
+                        // 忽略单个文件读取错误
+                    }
+                }
+            }
+
             // 获取活跃用户（最近7天签到过）
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
             const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
-            const activeUsers = Array.from(allUsers.values()).filter(user => user.lastCheckinDate >= oneWeekAgoStr).length;
+            const activeUsers = Array.from(userMap.values()).filter(user => user.lastCheckinDate >= oneWeekAgoStr).length;
 
             res.json({
                 code: 0,
                 data: {
-                    totalUsers,
+                    totalUsers: userMap.size,
                     totalCheckins,
-                    totalPoints,
-                    totalActiveDays,
                     todayCheckins,
                     activeUsers,
                 },
