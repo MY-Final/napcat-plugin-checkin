@@ -1,6 +1,34 @@
 import { useState } from 'react'
 import { IconBook, IconTerminal, IconBook as IconBookSvg } from '../components/icons'
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`ml-2 px-2 py-1 rounded text-xs transition-colors ${
+        copied
+          ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+      }`}
+      title="复制到剪贴板"
+    >
+      {copied ? '已复制' : '复制'}
+    </button>
+  )
+}
+
 interface ApiEndpoint {
   id: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -1390,9 +1418,12 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
               <p className="text-sm text-orange-600 dark:text-orange-300">
                 调用此接口需要在请求头中携带认证信息：
               </p>
-              <pre className="mt-2 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 p-2 rounded text-xs overflow-x-auto">
+              <div className="relative">
+                <pre className="mt-2 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 p-2 rounded text-xs overflow-x-auto">
 {`Authorization: Bearer <your-token>`}
-              </pre>
+                </pre>
+                <CopyButton text='Authorization: Bearer <your-token>' />
+              </div>
             </div>
           )}
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{endpoint.description}</p>
@@ -1435,9 +1466,12 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
 
           {endpoint.example && (
             <div className="mb-4">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider mb-2">
-                请求示例
-              </h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider">
+                  请求示例
+                </h4>
+                <CopyButton text={endpoint.example} />
+              </div>
               <pre className="bg-gray-800 text-gray-100 p-3 rounded-lg text-xs overflow-x-auto">
                 <code>{endpoint.example}</code>
               </pre>
@@ -1446,9 +1480,12 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
 
           {endpoint.response && (
             <div>
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider mb-2">
-                Response JSON
-              </h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider">
+                  Response JSON
+                </h4>
+                <CopyButton text={endpoint.response} />
+              </div>
               <pre className="bg-gray-800 text-gray-100 p-3 rounded-lg text-xs overflow-x-auto">
                 <code>{endpoint.response}</code>
               </pre>
