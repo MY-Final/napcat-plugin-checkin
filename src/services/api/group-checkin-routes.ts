@@ -80,4 +80,42 @@ export function registerGroupCheckinRoutes(ctx: NapCatPluginContext): void {
             res.status(500).json({ code: -1, message: String(err) });
         }
     });
+
+    /** 获取指定群的签到排行（含活跃天数） */
+    router.getNoAuth('/checkin/groups/:id/checkin-ranking', (req, res) => {
+        try {
+            const groupId = req.params?.id;
+            if (!groupId) {
+                return res.status(400).json({ code: -1, message: '缺少群 ID' });
+            }
+
+            const groupUsers = getGroupAllUsersData(groupId);
+            
+            const sortedUsers = Array.from(groupUsers.values())
+                .sort((a, b) => b.totalCheckinDays - a.totalCheckinDays)
+                .slice(0, 100)
+                .map(user => ({
+                    userId: user.userId,
+                    nickname: user.nickname,
+                    totalExp: user.totalExp,
+                    balance: user.balance,
+                    totalCheckinDays: user.totalCheckinDays,
+                    consecutiveDays: user.consecutiveDays,
+                    lastCheckinDate: user.lastCheckinDate,
+                    activeDays: user.activeDays || 0,
+                }));
+
+            res.json({
+                code: 0,
+                data: {
+                    groupId,
+                    totalUsers: groupUsers.size,
+                    ranking: sortedUsers,
+                },
+            });
+        } catch (err) {
+            ctx.logger.error('获取群内签到排行失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
 }

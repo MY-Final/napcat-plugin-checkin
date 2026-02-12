@@ -473,6 +473,8 @@ export async function performCheckin(
                     levelIcon: '🌱',
                     totalCheckinDays: 0,
                     consecutiveDays: 0,
+                    activeDays: 0,
+                    lastActiveDate: '',
                     lastCheckinDate: '',
                     checkinHistory: [],
                     transactionLog: [],
@@ -533,6 +535,13 @@ export async function performCheckin(
                 
                 groupUserData.consecutiveDays = groupConsecutiveDays;
                 groupUserData.totalCheckinDays += 1;
+                
+                // 更新群内活跃天数（每天首次签到增加）
+                if (groupUserData.lastActiveDate !== today) {
+                    groupUserData.activeDays += 1;
+                    groupUserData.lastActiveDate = today;
+                }
+                
                 groupUserData.lastCheckinDate = today;
                 
                 // 添加到签到历史

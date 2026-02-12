@@ -402,6 +402,10 @@ export interface GroupUserCheckinData {
     totalCheckinDays: number;
     /** 群内连续签到天数 */
     consecutiveDays: number;
+    /** 群内活跃天数（群内首次签到计1天，独立统计） */
+    activeDays: number;
+    /** 群内最后活跃日期 YYYY-MM-DD */
+    lastActiveDate: string;
     /** 群内最后签到日期 YYYY-MM-DD */
     lastCheckinDate: string;
     /** 群内签到历史记录 */

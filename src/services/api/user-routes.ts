@@ -43,6 +43,8 @@ export function registerUserRoutes(ctx: NapCatPluginContext): void {
                         consecutiveDays: groupUserData.consecutiveDays,
                         totalPoints: groupUserData.totalExp,
                         balance: groupUserData.balance,
+                        activeDays: groupUserData.activeDays || 0,
+                        lastActiveDate: groupUserData.lastActiveDate || '',
                         lastCheckinDate: groupUserData.lastCheckinDate,
                         checkinHistory: groupUserData.checkinHistory || [],
                     },
