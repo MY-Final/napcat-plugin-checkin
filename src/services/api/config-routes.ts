@@ -8,13 +8,13 @@ import type { PluginConfig } from '../../types';
 export function registerConfigRoutes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
 
-    /** 获取配置 */
+    /** 获取配置（无需鉴权，公开信息） */
     router.getNoAuth('/config', (_req, res) => {
         res.json({ code: 0, data: pluginState.config });
     });
 
-    /** 保存配置 */
-    router.postNoAuth('/config', async (req, res) => {
+    /** 保存配置（需要鉴权） */
+    router.post('/config', async (req, res) => {
         try {
             const body = req.body as Record<string, unknown> | undefined;
             if (!body) {

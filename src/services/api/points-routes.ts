@@ -12,7 +12,7 @@ import {
 export function registerPointsRoutes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
 
-    /** 获取群用户积分 */
+    /** 获取群用户积分（无需鉴权） */
     router.getNoAuth('/checkin/groups/:groupId/users/:userId/points', (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -37,8 +37,8 @@ export function registerPointsRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 修改群用户积分（增加/减少） */
-    router.postNoAuth('/checkin/groups/:groupId/users/:userId/points', (req, res) => {
+    /** 修改群用户积分（增加/减少）（需要鉴权） */
+    router.post('/checkin/groups/:groupId/users/:userId/points', (req, res) => {
         try {
             const groupId = req.params?.groupId;
             const userId = req.params?.userId;
@@ -90,7 +90,7 @@ export function registerPointsRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取群用户积分变更历史 */
+    /** 获取群用户积分变更历史（无需鉴权） */
     router.getNoAuth('/checkin/groups/:groupId/users/:userId/points/history', (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -118,15 +118,15 @@ export function registerPointsRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 重置群用户积分 */
-    router.postNoAuth('/checkin/groups/:groupId/users/:userId/points/reset', (req, res) => {
+    /** 重置群用户积分（需要鉴权） */
+    router.post('/checkin/groups/:groupId/users/:userId/points/reset', (req, res) => {
         try {
             const groupId = req.params?.groupId;
             const userId = req.params?.userId;
-            const body = req.body as { 
+            const body = { 
                 description?: string;
                 operatorId?: string;
-            } | undefined;
+            };
             
             if (!groupId || !userId) {
                 return res.status(400).json({ code: -1, message: '缺少群ID或用户ID' });
@@ -135,8 +135,8 @@ export function registerPointsRoutes(ctx: NapCatPluginContext): void {
             const result = resetGroupUserPoints(
                 groupId,
                 userId,
-                body?.description || '积分重置',
-                body?.operatorId
+                body.description || '积分重置',
+                body.operatorId
             );
 
             if (!result.success) {

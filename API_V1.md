@@ -15,11 +15,83 @@
 
 3. **新增 v1 API 接口**
 
+---
+
+## 认证与授权
+
+### 接口分类
+
+本 API 接口分为两类：
+
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| **无需鉴权** | 公开接口，可直接调用 | 查询用户积分、排行榜、等级配置 |
+| **需要鉴权** | 敏感操作接口，需 NapCat 框架认证 | 修改积分、配置管理、佩戴称号 |
+
+### 认证方式
+
+需要鉴权的接口使用 NapCat 框架内置的认证机制：
+
+- **WebUI 调用**：通过 NapCat WebUI 登录后自动携带认证信息
+- **API 调用**：需在请求头中携带认证 token
+
+```
+Authorization: Bearer <token>
+```
+
+### 需要鉴权的接口
+
+以下接口**必须**通过认证才能访问：
+
+#### 配置管理
+- `POST /config` - 保存插件配置
+- `POST /groups/:id/config` - 更新单个群配置
+- `POST /groups/bulk-config` - 批量更新群配置
+
+#### 积分操作
+- `POST /checkin/groups/:groupId/users/:userId/points` - 修改用户积分
+- `POST /checkin/groups/:groupId/users/:userId/points/reset` - 重置用户积分
+- `POST /v1/groups/:groupId/users/:userId/award` - 奖励积分
+- `POST /v1/groups/:groupId/users/:userId/consume` - 消费积分
+- `POST /v1/groups/:groupId/users/:userId/titles/equip` - 佩戴称号
+
+### 无需鉴权的接口
+
+以下接口可公开访问：
+
+- `GET /config` - 获取插件配置
+- `GET /groups` - 获取群列表
+- `GET /checkin/groups/:groupId/users/:userId/points` - 查询用户积分
+- `GET /checkin/groups/:groupId/users/:userId/points/history` - 查询积分历史
+- `GET /v1/groups/:groupId/users/:userId/points` - 获取用户积分信息
+- `GET /v1/groups/:groupId/users/:userId/balance/check` - 检查余额
+- `GET /v1/groups/:groupId/users/:userId/transactions` - 获取交易流水
+- `GET /v1/groups/:groupId/users/:userId/level` - 获取用户等级
+- `GET /v1/groups/:groupId/users/:userId/titles` - 获取用户称号
+- `GET /v1/groups/:groupId/titles` - 获取群称号列表
+- `GET /v1/groups/:groupId/ranking/exp` - 按经验值排行
+- `GET /v1/groups/:groupId/ranking/balance` - 按余额排行
+- `GET /v1/levels/config` - 获取等级配置
+
+### 错误码
+
+| 错误码 | 说明 |
+|--------|------|
+| 0 | 成功 |
+| -1 | 失败（见 message 字段） |
+| 400 | 请求参数错误 |
+| 401 | 未认证或认证失败 |
+| 403 | 无权限访问 |
+| 404 | 用户不存在 |
+| 500 | 服务器内部错误 |
+
+---
+
 ## v1 API 接口
 
 ### 积分管理
 
-#### 1. 奖励积分（签到、活动等）
+#### 1. 奖励积分（签到、活动等） [需要鉴权]
 ```
 POST /v1/groups/{groupId}/users/{userId}/award
 ```
@@ -54,7 +126,7 @@ POST /v1/groups/{groupId}/users/{userId}/award
 }
 ```
 
-#### 2. 消费积分（购买道具等）
+#### 2. 消费积分（购买道具等） [需要鉴权]
 ```
 POST /v1/groups/{groupId}/users/{userId}/consume
 ```
@@ -71,7 +143,7 @@ POST /v1/groups/{groupId}/users/{userId}/consume
 
 **注意：** `idempotencyKey` 为必填，防止重复扣款
 
-#### 3. 检查余额
+#### 3. 检查余额 [无需鉴权]
 ```
 GET /v1/groups/{groupId}/users/{userId}/balance/check?required=100
 ```
@@ -88,7 +160,7 @@ GET /v1/groups/{groupId}/users/{userId}/balance/check?required=100
 }
 ```
 
-#### 4. 获取用户积分信息
+#### 4. 获取用户积分信息 [无需鉴权]
 ```
 GET /v1/groups/{groupId}/users/{userId}/points
 ```
@@ -109,14 +181,14 @@ GET /v1/groups/{groupId}/users/{userId}/points
 }
 ```
 
-#### 5. 获取交易流水
+#### 5. 获取交易流水 [无需鉴权]
 ```
 GET /v1/groups/{groupId}/users/{userId}/transactions?limit=50
 ```
 
 ### 等级系统
 
-#### 6. 获取等级配置
+#### 6. 获取等级配置 [无需鉴权]
 ```
 GET /v1/levels/config
 ```
@@ -134,7 +206,7 @@ GET /v1/levels/config
 }
 ```
 
-#### 7. 获取用户等级信息
+#### 7. 获取用户等级信息 [无需鉴权]
 ```
 GET /v1/groups/{groupId}/users/{userId}/level
 ```
@@ -161,39 +233,17 @@ GET /v1/groups/{groupId}/users/{userId}/level
 
 ### 称号系统
 
-#### 8. 获取群称号列表
-```
-GET /v1/groups/{groupId}/titles
-```
+#### 8. 获取群称号列表 [无需鉴权]
 
-#### 9. 获取用户称号
-```
-GET /v1/groups/{groupId}/users/{userId}/titles
-```
+#### 9. 获取用户称号 [无需鉴权]
 
-#### 10. 佩戴称号
-```
-POST /v1/groups/{groupId}/users/{userId}/titles/equip
-```
-
-**请求参数：**
-```json
-{
-  "titleId": "level-3"
-}
-```
+#### 10. 佩戴称号 [需要鉴权]
 
 ### 排行榜
 
-#### 11. 按经验值排行
-```
-GET /v1/groups/{groupId}/ranking/exp?limit=50
-```
+#### 11. 按经验值排行 [无需鉴权]
 
-#### 12. 按余额排行
-```
-GET /v1/groups/{groupId}/ranking/balance?limit=50
-```
+#### 12. 按余额排行 [无需鉴权]
 
 ## 兼容旧 API
 
@@ -235,6 +285,8 @@ A: 使用 `/v1/groups/{groupId}/users/{userId}/transactions` 接口。
 | 0 | 成功 |
 | -1 | 失败（见 message 字段） |
 | 400 | 请求参数错误 |
+| 401 | 未认证或认证失败 |
+| 403 | 无权限访问 |
 | 404 | 用户不存在 |
 | 500 | 服务器内部错误 |
 
@@ -780,7 +832,7 @@ GET /checkin/groups/{groupId}/checkin-ranking
 
 ## 旧版积分管理接口（兼容）
 
-### 23. 获取积分变更历史
+### 23. 获取积分变更历史 [无需鉴权]
 ```
 GET /checkin/groups/{groupId}/users/{userId}/points/history?limit=50
 ```
@@ -809,7 +861,7 @@ GET /checkin/groups/{groupId}/users/{userId}/points/history?limit=50
 }
 ```
 
-### 24. 重置用户积分
+### 24. 重置用户积分 [需要鉴权]
 ```
 POST /checkin/groups/{groupId}/users/{userId}/points/reset
 ```

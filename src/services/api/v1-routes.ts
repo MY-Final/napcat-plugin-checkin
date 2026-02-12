@@ -14,8 +14,8 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
 
     // ========== 积分操作 ==========
 
-    /** 奖励积分 */
-    router.postNoAuth('/v1/groups/:groupId/users/:userId/award', async (req, res) => {
+    /** 奖励积分（需要鉴权） */
+    router.post('/v1/groups/:groupId/users/:userId/award', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
             const userId = req.params?.userId;
@@ -62,8 +62,8 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 消费积分 */
-    router.postNoAuth('/v1/groups/:groupId/users/:userId/consume', async (req, res) => {
+    /** 消费积分（需要鉴权） */
+    router.post('/v1/groups/:groupId/users/:userId/consume', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
             const userId = req.params?.userId;
@@ -112,7 +112,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 检查余额 */
+    /** 检查余额（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/users/:userId/balance/check', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -131,7 +131,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取用户积分信息 */
+    /** 获取用户积分信息（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/users/:userId/points', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -153,7 +153,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取交易流水 */
+    /** 获取交易流水（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/users/:userId/transactions', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -190,7 +190,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
 
     // ========== 等级系统 ==========
 
-    /** 获取等级配置 */
+    /** 获取等级配置（无需鉴权，公开配置） */
     router.getNoAuth('/v1/levels/config', (_req, res) => {
         try {
             res.json({
@@ -206,7 +206,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取用户等级信息 */
+    /** 获取用户等级信息（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/users/:userId/level', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -230,7 +230,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
 
     // ========== 称号系统 ==========
 
-    /** 获取群所有称号 */
+    /** 获取群所有称号（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/titles', (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -246,7 +246,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 获取用户称号列表 */
+    /** 获取用户称号列表（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/users/:userId/titles', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -264,8 +264,8 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 佩戴称号 */
-    router.postNoAuth('/v1/groups/:groupId/users/:userId/titles/equip', async (req, res) => {
+    /** 佩戴称号（需要鉴权） */
+    router.post('/v1/groups/:groupId/users/:userId/titles/equip', async (req, res) => {
         try {
             const groupId = req.params?.groupId;
             const userId = req.params?.userId;
@@ -293,7 +293,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
 
     // ========== 排行榜 ==========
 
-    /** 按经验值排行 */
+    /** 按经验值排行（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/ranking/exp', (req, res) => {
         try {
             const groupId = req.params?.groupId;
@@ -331,7 +331,7 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 按余额排行 */
+    /** 按余额排行（无需鉴权） */
     router.getNoAuth('/v1/groups/:groupId/ranking/balance', (req, res) => {
         try {
             const groupId = req.params?.groupId;

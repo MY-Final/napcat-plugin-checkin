@@ -14,7 +14,7 @@ interface GroupInfo {
 export function registerGroupRoutes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
 
-    /** 获取群列表（附带各群启用状态） */
+    /** 获取群列表（无需鉴权，公开信息） */
     router.getNoAuth('/groups', async (_req, res) => {
         try {
             const groups = await ctx.actions.call(
@@ -44,8 +44,8 @@ export function registerGroupRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 更新单个群配置 */
-    router.postNoAuth('/groups/:id/config', async (req, res) => {
+    /** 更新单个群配置（需要鉴权） */
+    router.post('/groups/:id/config', async (req, res) => {
         try {
             const groupId = req.params?.id;
             if (!groupId) {
@@ -68,8 +68,8 @@ export function registerGroupRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    /** 批量更新群配置 */
-    router.postNoAuth('/groups/bulk-config', async (req, res) => {
+    /** 批量更新群配置（需要鉴权） */
+    router.post('/groups/bulk-config', async (req, res) => {
         try {
             const body = req.body as Record<string, unknown> | undefined;
             const { enabled, enableCheckin, groupIds } = body || {};
