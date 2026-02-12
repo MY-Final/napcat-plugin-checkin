@@ -123,7 +123,7 @@ export function registerPointsRoutes(ctx: NapCatPluginContext): void {
         try {
             const groupId = req.params?.groupId;
             const userId = req.params?.userId;
-            const body = { 
+            const body = (req.body || {}) as { 
                 description?: string;
                 operatorId?: string;
             };
