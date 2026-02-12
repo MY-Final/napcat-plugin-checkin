@@ -37,8 +37,18 @@
 - **积分排行** - 全服积分排行榜，点击头像查看用户详情
 - **活跃排行** - 全服活跃排行榜，识别忠实用户
 - **分群排行** - 各群签到排行，卡片式群选择器
+- **签到日志** - 完整的签到记录查询、统计、趋势分析
 - **模板编辑** - 可视化编辑签到卡片 HTML 模板，实时预览
 - **接口文档** - 完整的 API 接口文档
+
+### 📊 签到日志系统
+- **完整记录** - 记录每次签到的详细信息（积分、排名、加成等）
+- **灵活查询** - 支持按用户、群组、时间范围、状态筛选
+- **数据统计** - 统计成功率、总积分、用户数、群组数
+- **趋势分析** - 查看近30天签到趋势图表
+- **群配置** - 支持按群独立开关日志功能
+- **自动清理** - 自动清理过期日志（可配置保留天数）
+- **手动清理** - 支持手动清理指定天数前的日志
 
 ### 🔌 积分管理 API
 提供完整的 RESTful API 供其他插件集成：
@@ -169,6 +179,21 @@
 - 排行相关接口
 - 积分管理接口（CRUD）
 - 模板预览接口
+- 签到日志查询接口
+
+### 签到日志
+完整的签到记录追踪功能：
+- **签到记录查询** - 支持按用户、群组、时间范围筛选
+- **签到统计** - 统计成功率、总积分、用户数、群组数
+- **每日趋势** - 查看近30天签到情况
+- **日志配置** - 支持按群开关日志、设置保留天数
+- **自动清理** - 自动清理过期日志（默认90天）
+- **手动清理** - 支持手动清理指定天数前的日志
+
+### 活跃天数统计
+- **活跃定义** - 每天首次使用机器人计1天活跃
+- **多群去重** - 用户在多个群签到只算1天活跃
+- **忠实用户识别** - 活跃天数越多，用户越忠实
 
 ## ⚙️ 配置项
 
@@ -204,6 +229,70 @@ const result = await fetch('/plugin/napcat-plugin-checkin/api/checkin/groups/123
 });
 ```
 
+### 签到日志接口示例
+
+```typescript
+// 查询签到日志（分页）
+const logsRes = await fetch('/plugin/napcat-plugin-checkin/api/logs?page=1&pageSize=50&status=success');
+const logsData = await logsRes.json();
+
+// 获取日志统计
+const statsRes = await fetch('/plugin/napcat-plugin-checkin/api/logs/stats?timeRange=week');
+const statsData = await statsRes.json();
+
+// 获取每日趋势
+const trendRes = await fetch('/plugin/napcat-plugin-checkin/api/logs/trend?days=30');
+const trendData = await trendRes.json();
+
+// 获取用户签到日志
+const userLogsRes = await fetch('/plugin/napcat-plugin-checkin/api/logs/users/123456');
+const userLogsData = await userLogsRes.json();
+
+// 获取群组签到日志
+const groupLogsRes = await fetch('/plugin/napcat-plugin-checkin/api/logs/groups/987654');
+const groupLogsData = await groupLogsRes.json();
+
+// 获取单条日志详情
+const logDetailRes = await fetch('/plugin/napcat-plugin-checkin/api/logs/log-xxx');
+const logDetailData = await logDetailRes.json();
+
+// 更新群日志配置
+await fetch('/plugin/napcat-plugin-checkin/api/logs/config/987654', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    enabled: true,
+    enableStats: true,
+    retentionDays: 90
+  })
+});
+
+// 清理过期日志
+await fetch('/plugin/napcat-plugin-checkin/api/logs/cleanup?days=30', {
+  method: 'POST'
+});
+```
+
+### 排行榜数据接口示例
+
+```typescript
+// 获取群排行榜（支持 week/month/year/all）
+const leaderboardRes = await fetch('/plugin/napcat-plugin-checkin/api/leaderboard/123456?type=week');
+const leaderboardData = await leaderboardRes.json();
+```
+
+### 用户数据接口示例
+
+```typescript
+// 获取用户分群余额详情
+const balanceRes = await fetch('/plugin/napcat-plugin-checkin/api/checkin/user/123456/balance');
+const balanceData = await balanceRes.json();
+
+// 获取所有用户数据（管理用）
+const usersRes = await fetch('/plugin/napcat-plugin-checkin/api/checkin/users');
+const usersData = await usersRes.json();
+```
+
 ## 📁 项目结构
 
 ```
@@ -221,7 +310,9 @@ napcat-plugin-checkin/
 │   ├── services/
 │   │   ├── api-service.ts        # WebUI API 路由
 │   │   ├── checkin-service.ts    # 签到核心业务逻辑
-│   │   └── points-calculator.ts  # 积分计算
+│   │   ├── points-calculator.ts  # 积分计算
+│   │   ├── log-service.ts        # 签到日志服务
+│   │   └── ...
 │   ├── utils/
 │   │   └── checkin-messages.ts   # 随机寄语
 │   └── webui/                # React SPA 前端
@@ -236,6 +327,7 @@ napcat-plugin-checkin/
 │       │   │   ├── PointsRankingPage.tsx    # 积分排行
 │       │   │   ├── ActiveRankingPage.tsx    # 活跃排行
 │       │   │   ├── CheckinDataPage.tsx      # 分群排行
+│       │   │   ├── LogPage.tsx              # 签到日志
 │       │   │   ├── TemplatePage.tsx         # 模板编辑
 │       │   │   └── ApiDocsPage.tsx          # 接口文档
 │       │   └── ...
