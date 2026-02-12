@@ -159,36 +159,31 @@ export async function handleCheckinCommand(
         // 根据配置决定发送图片还是文字
         const replyMode = pluginState.config.checkinReplyMode || 'auto';
         let useImageMode = false;
+        let imageBuffer: Buffer | null = null;
 
         if (replyMode === 'image') {
             useImageMode = true;
         } else if (replyMode === 'auto') {
             // auto 模式下，尝试生成图片，如果成功则使用图片
-            const imageBuffer = await renderCheckinCard(cardData);
+            imageBuffer = await renderCheckinCard(cardData);
             useImageMode = imageBuffer !== null;
         }
         // replyMode === 'text' 时 useImageMode 保持 false
 
-        if (useImageMode) {
+        if (useImageMode && imageBuffer) {
             // 图片模式：发送图片卡片
-            const imageBuffer = await renderCheckinCard(cardData);
-            if (imageBuffer) {
-                const base64Image = imageBuffer.toString('base64');
-                const message: OB11PostSendMsg['message'] = [
-                    {
-                        type: 'image',
-                        data: {
-                            file: `base64://${base64Image}`,
-                        },
+            const base64Image = imageBuffer.toString('base64');
+            const message: OB11PostSendMsg['message'] = [
+                {
+                    type: 'image',
+                    data: {
+                        file: `base64://${base64Image}`,
                     },
-                ];
-                await sendReply(ctx, event, message);
-            } else {
-                // 图片生成失败，降级为文字
-                await sendTextCheckinResult(ctx, event, cardData, result.consecutiveDays);
-            }
+                },
+            ];
+            await sendReply(ctx, event, message);
         } else {
-            // 文字模式：发送文字签到结果
+            // 文字模式或图片生成失败，降级为文字
             await sendTextCheckinResult(ctx, event, cardData, result.consecutiveDays);
         }
 

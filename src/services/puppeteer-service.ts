@@ -144,10 +144,7 @@ function generateCheckinHtml(data: CheckinCardData): string {
         .points {
             font-size: 88px;
             font-weight: bold;
-            background: linear-gradient(180deg, #f43f5e 0%, #be185d 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #f43f5e;
             line-height: 1;
         }
         .points-label {

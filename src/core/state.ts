@@ -291,8 +291,15 @@ class PluginState {
      */
     loadConfig(): void {
         const configPath = this.ctx.configPath;
+        if (!configPath) {
+            this.config = { ...DEFAULT_CONFIG, groupConfigs: {} };
+            this.saveConfig();
+            this.ctx.logger.debug('配置文件路径不存在，已创建默认配置');
+            return;
+        }
+        
         try {
-            if (configPath && fs.existsSync(configPath)) {
+            if (fs.existsSync(configPath)) {
                 const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
                 this.config = sanitizeConfig(raw);
                 // 加载统计信息

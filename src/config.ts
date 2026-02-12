@@ -45,8 +45,8 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
     return ctx.NapCatConfig.combine(
         // 插件信息头部
         ctx.NapCatConfig.html(`
-            <div style="padding: 16px; background: linear-gradient(135deg, #FB7299 0%, #FF8FB0 100%); border-radius: 12px; margin-bottom: 20px; color: white;">
-                <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 600;">✨ NapCat 签到插件</h3>
+            <div style="padding: 16px; background: #FB7299; border-radius: 12px; margin-bottom: 20px; color: white;">
+                <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 600;">NapCat 签到插件</h3>
                 <p style="margin: 0; font-size: 13px; opacity: 0.9">精美卡片式签到系统，支持连续签到加成和积分统计</p>
             </div>
         `),

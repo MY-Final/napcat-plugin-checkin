@@ -18,7 +18,6 @@ export function calculateUserTotalBalance(userId: string): number {
         if (!fs.existsSync(dataPath)) {
             return 0;
         }
-
         const files = fs.readdirSync(dataPath);
         const groupFiles = files.filter(file => file.startsWith(GROUP_DATA_PREFIX) && file.endsWith('.json'));
 
