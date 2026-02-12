@@ -317,6 +317,75 @@ export function getCheckinCommands(config: { checkinCommands?: string; checkinCo
     return ['签到'];
 }
 
+// ==================== 模板系统 ====================
+
+/**
+ * 模板类型
+ */
+export type TemplateType = 'checkin' | 'leaderboard';
+
+/**
+ * 模板数据
+ */
+export interface TemplateData {
+    /** 模板唯一 ID */
+    id: string;
+    /** 模板名称 */
+    name: string;
+    /** 模板类型 */
+    type: TemplateType;
+    /** 模板 HTML 内容 */
+    html: string;
+    /** 是否启用 */
+    enabled: boolean;
+    /** 是否为默认模板 */
+    isDefault: boolean;
+    /** 创建时间 */
+    createdAt: string;
+    /** 更新时间 */
+    updatedAt: string;
+}
+
+/**
+ * 模板创建参数
+ */
+export interface CreateTemplateParams {
+    /** 模板名称 */
+    name: string;
+    /** 模板类型 */
+    type: TemplateType;
+    /** 模板 HTML 内容 */
+    html: string;
+}
+
+/**
+ * 模板更新参数
+ */
+export interface UpdateTemplateParams {
+    /** 模板名称 */
+    name?: string;
+    /** 模板 HTML 内容 */
+    html?: string;
+    /** 是否启用 */
+    enabled?: boolean;
+}
+
+/**
+ * 插件模板配置
+ */
+export interface PluginTemplateConfig {
+    /** 是否启用随机模板 */
+    enableRandomTemplate: boolean;
+    /** 签到模板 ID（空表示随机） */
+    checkinTemplateId: string | null;
+    /** 排行榜模板 ID（空表示随机） */
+    leaderboardTemplateId: string | null;
+    /** 默认签到模板 ID（fallback） */
+    defaultCheckinTemplateId: string | null;
+    /** 默认排行榜模板 ID（fallback） */
+    defaultLeaderboardTemplateId: string | null;
+}
+
 // ==================== API 响应 ====================
 
 /**

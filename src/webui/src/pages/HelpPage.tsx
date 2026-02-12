@@ -95,8 +95,8 @@ export default function HelpPage() {
                     />
                     <FeatureCard
                         icon={<IconCode size={24} />}
-                        title="API 接口"
-                        description="提供完整的 RESTful API，支持查询、修改积分，方便其他插件集成"
+                        title="模板管理系统"
+                        description="支持创建多个签到/排行榜模板，可设置随机模板，每次发送不同卡片"
                     />
                     <FeatureCard
                         icon={<IconAlertCircle size={24} />}
@@ -265,9 +265,9 @@ export default function HelpPage() {
                         </p>
                     </div>
                     <div className="space-y-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">🎨 模板编辑</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">🎨 模板管理</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            可视化编辑签到卡片和排行榜卡片的 HTML 模板，支持实时预览。提供丰富的模板变量，支持自定义样式。
+                            管理多个签到和排行榜模板，支持创建、编辑、删除模板。可设置随机模板，每次签到/排行发送不同卡片。支持模板分组管理，提供实时预览和测试数据编辑功能。
                         </p>
                     </div>
                     <div className="space-y-2">

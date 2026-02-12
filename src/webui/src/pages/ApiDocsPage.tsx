@@ -41,6 +41,217 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 }`
   },
   {
+    id: 'templates-list',
+    method: 'GET',
+    path: '/templates',
+    title: '获取所有模板',
+    description: '获取所有签到和排行榜模板列表',
+    response: `{
+  "code": 0,
+  "data": [
+    {
+      "id": "default-checkin",
+      "name": "默认签到模板",
+      "type": "checkin",
+      "html": "...",
+      "isDefault": true
+    },
+    {
+      "id": "default-leaderboard",
+      "name": "默认排行榜模板",
+      "type": "leaderboard",
+      "html": "...",
+      "isDefault": true
+    }
+  ]
+}`
+  },
+  {
+    id: 'templates-get',
+    method: 'GET',
+    path: '/templates/:id',
+    title: '获取单个模板',
+    description: '根据模板 ID 获取模板详情',
+    response: `{
+  "code": 0,
+  "data": {
+    "id": "default-checkin",
+    "name": "默认签到模板",
+    "type": "checkin",
+    "html": "<html>...",
+    "isDefault": true,
+    "createdAt": "2026-02-01T10:00:00Z",
+    "updatedAt": "2026-02-10T10:00:00Z"
+  }
+}`
+  },
+  {
+    id: 'templates-by-type',
+    method: 'GET',
+    path: '/templates/type/:type',
+    title: '按类型获取模板',
+    description: '根据模板类型（checkin/leaderboard）获取模板列表',
+    response: `{
+  "code": 0,
+  "data": [
+    {
+      "id": "default-checkin",
+      "name": "默认签到模板",
+      "type": "checkin",
+      "html": "...",
+      "isDefault": true
+    }
+  ]
+}`
+  },
+  {
+    id: 'templates-create',
+    method: 'POST',
+    path: '/templates',
+    title: '创建模板',
+    description: '创建新的签到或排行榜模板',
+    params: [
+      { name: 'name', type: 'string', required: true, description: '模板名称' },
+      { name: 'type', type: 'string', required: true, description: '模板类型: checkin | leaderboard' },
+      { name: 'html', type: 'string', required: true, description: '模板 HTML 内容' },
+      { name: 'description', type: 'string', required: false, description: '模板描述' },
+    ],
+    response: `{
+  "code": 0,
+  "data": {
+    "id": "template-xxx",
+    "name": "新模板",
+    "type": "checkin",
+    "html": "...",
+    "isDefault": false,
+    "createdAt": "2026-02-12T10:00:00Z",
+    "updatedAt": "2026-02-12T10:00:00Z"
+  }
+}`,
+    example: `{
+  "name": "新年主题签到",
+  "type": "checkin",
+  "html": "<html><body>新年快乐 {{nickname}}</body></html>",
+  "description": "新年主题签到卡片"
+}`
+  },
+  {
+    id: 'templates-update',
+    method: 'POST',
+    path: '/templates/:id',
+    title: '更新模板',
+    description: '更新指定模板的内容和属性',
+    params: [
+      { name: 'name', type: 'string', required: false, description: '模板名称' },
+      { name: 'html', type: 'string', required: false, description: '模板 HTML 内容' },
+      { name: 'description', type: 'string', required: false, description: '模板描述' },
+    ],
+    response: `{
+  "code": 0,
+  "data": {
+    "id": "template-xxx",
+    "name": "更新后的模板",
+    "type": "checkin",
+    "html": "...",
+    "isDefault": false,
+    "updatedAt": "2026-02-12T11:00:00Z"
+  }
+}`,
+    example: `{
+  "name": "更新后的模板名称",
+  "html": "<html><body>更新后的内容</body></html>"
+}`
+  },
+  {
+    id: 'templates-delete',
+    method: 'POST',
+    path: '/templates/:id/delete',
+    title: '删除模板',
+    description: '删除指定模板（不能删除系统默认模板）',
+    response: `{
+  "code": 0,
+  "message": "删除成功"
+}`
+  },
+  {
+    id: 'templates-duplicate',
+    method: 'POST',
+    path: '/templates/:id/duplicate',
+    title: '复制模板',
+    description: '复制指定模板为新模板',
+    params: [
+      { name: 'name', type: 'string', required: false, description: '新模板名称（可选）' },
+    ],
+    response: `{
+  "code": 0,
+  "data": {
+    "id": "template-yyy",
+    "name": "复制-默认签到模板",
+    "type": "checkin",
+    "html": "...",
+    "isDefault": false
+  }
+}`
+  },
+  {
+    id: 'templates-set-default',
+    method: 'POST',
+    path: '/templates/:id/set-default',
+    title: '设置默认模板',
+    description: '将指定模板设置为对应类型的默认模板',
+    response: `{
+  "code": 0,
+  "message": "设置成功"
+}`
+  },
+  {
+    id: 'templates-config-get',
+    method: 'GET',
+    path: '/templates/config',
+    title: '获取模板配置',
+    description: '获取当前模板配置（随机模板开关、指定模板等）',
+    response: `{
+  "code": 0,
+  "data": {
+    "enableRandomTemplate": true,
+    "checkinTemplateId": null,
+    "leaderboardTemplateId": null
+  }
+}`
+  },
+  {
+    id: 'templates-config-save',
+    method: 'POST',
+    path: '/templates/config',
+    title: '保存模板配置',
+    description: '更新模板配置（随机模板开关、指定模板）',
+    params: [
+      { name: 'enableRandomTemplate', type: 'boolean', required: false, description: '是否启用随机模板' },
+      { name: 'checkinTemplateId', type: 'string', required: false, description: '指定签到模板 ID（null 为使用默认）' },
+      { name: 'leaderboardTemplateId', type: 'string', required: false, description: '指定排行榜模板 ID（null 为使用默认）' },
+    ],
+    response: `{
+  "code": 0,
+  "message": "配置已更新"
+}`,
+    example: `{
+  "enableRandomTemplate": false,
+  "checkinTemplateId": "my-custom-template",
+  "leaderboardTemplateId": null
+}`
+  },
+  {
+    id: 'templates-init',
+    method: 'POST',
+    path: '/templates/init-defaults',
+    title: '初始化默认模板',
+    description: '重新初始化默认模板（会恢复系统默认模板）',
+    response: `{
+  "code": 0,
+  "message": "初始化成功"
+}`
+  },
+  {
     id: 'get-config',
     method: 'GET',
     path: '/config',
@@ -576,7 +787,30 @@ export default function ApiDocsPage() {
               <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">模板服务</p>
             </div>
 
-            {API_ENDPOINTS.slice(15).map((endpoint) => (
+            {API_ENDPOINTS.slice(15, 18).map((endpoint) => (
+              <button
+                key={endpoint.id}
+                onClick={() => setActiveSection(endpoint.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeSection === endpoint.id
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <span className={`text-xs ${
+                  endpoint.method === 'GET' ? 'text-blue-500' : 'text-orange-500'
+                }`}>
+                  {endpoint.method}
+                </span>
+                <span className="truncate">{endpoint.path}</span>
+              </button>
+            ))}
+
+            <div className="pt-4 pb-2">
+              <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">模板管理</p>
+            </div>
+
+            {API_ENDPOINTS.slice(18).map((endpoint) => (
               <button
                 key={endpoint.id}
                 onClick={() => setActiveSection(endpoint.id)}

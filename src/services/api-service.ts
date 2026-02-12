@@ -16,6 +16,7 @@ import { registerGroupCheckinRoutes } from './api/group-checkin-routes';
 import { registerPointsRoutes } from './api/points-routes';
 import { registerLeaderboardRoutes } from './api/leaderboard-routes';
 import { registerTemplateRoutes } from './api/template-routes';
+import { registerTemplateManageRoutes } from './api/template-manage-routes';
 import { registerV1Routes } from './api/v1-routes';
 
 /**
@@ -51,6 +52,9 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
     
     // 模板预览
     registerTemplateRoutes(ctx);
+    
+    // 模板管理
+    registerTemplateManageRoutes(ctx);
     
     // v1 API (双轨制积分系统)
     registerV1Routes(ctx);

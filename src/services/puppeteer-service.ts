@@ -5,6 +5,7 @@
 
 import { pluginState } from '../core/state';
 import type { CheckinCardData } from '../types';
+import { getTemplateForSend, initDefaultTemplates } from './template-service';
 
 // Puppeteer 插件 API 地址
 const PUPPETEER_API = 'http://127.0.0.1:6099/plugin/napcat-plugin-puppeteer/api/render';
@@ -329,12 +330,13 @@ export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer |
     try {
         pluginState.logger.info('开始调用 Puppeteer 渲染签到卡片...');
         
-        // 检查是否有自定义模板
-        const customTemplate = pluginState.config.customHtmlTemplate;
         let html: string;
         
-        if (customTemplate) {
-            pluginState.logger.debug('使用自定义 HTML 模板');
+        initDefaultTemplates();
+        const template = getTemplateForSend('checkin');
+        
+        if (template) {
+            pluginState.logger.debug(`使用模板: ${template.name} (${template.id})`);
             // 将数据转换为模板变量格式
             const templateData: Record<string, string | number> = {
                 nickname: data.nickname,
@@ -348,10 +350,18 @@ export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer |
                 currentDate: data.currentDate,
                 quote: data.quote,
                 consecutiveDays: data.consecutiveDays || 0,
+                weekday: data.weekday || 0,
+                weekdayName: data.weekdayName || '',
+                isWeekend: data.isWeekend ? 'true' : 'false',
+                groupName: data.groupName || '',
+                activeDays: data.activeDays || 0,
+                basePoints: data.basePoints || data.earnedPoints,
+                consecutiveBonus: data.consecutiveBonus || 0,
+                weekendBonus: data.weekendBonus || 0,
             };
-            html = replaceTemplateVariables(customTemplate, templateData);
+            html = replaceTemplateVariables(template.html, templateData);
         } else {
-            pluginState.logger.debug('使用默认 HTML 模板');
+            pluginState.logger.debug('使用内置默认 HTML 模板');
             html = generateCheckinHtml(data);
         }
         
