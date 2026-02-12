@@ -25,6 +25,7 @@ export interface PluginConfig {
     checkinReplyMode: 'text' | 'image' | 'auto'
     // 自定义 HTML 模板
     customHtmlTemplate?: string
+    customLeaderboardTemplate?: string
     checkinPoints: {
         minPoints: number
         maxPoints: number
@@ -39,6 +40,18 @@ export interface PluginConfig {
             bonus: number
         }>
     }
+    // 签到刷新时间配置
+    checkinRefreshTime: {
+        hour: number
+        minute: number
+        cycleType: 'daily' | 'weekly' | 'monthly'
+        cycleCount: number
+    }
+    // 排行榜配置
+    enableLeaderboard: boolean
+    leaderboardCommands: string
+    leaderboardTopCount: number
+    leaderboardReplyMode: 'text' | 'image' | 'auto'
 }
 
 export interface GroupConfig {

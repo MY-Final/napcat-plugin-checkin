@@ -35,6 +35,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
     enableLeaderboard: true,
     leaderboardCommands: '排行榜,排行,rank',
     leaderboardTopCount: 10,
+    leaderboardReplyMode: 'auto',
 };
 
 /**
@@ -101,5 +102,10 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
         ctx.NapCatConfig.boolean('enableLeaderboard', '启用排行榜功能', true, '是否启用积分排行榜功能'),
         ctx.NapCatConfig.text('leaderboardCommands', '排行榜命令列表', '排行榜,排行,rank', '触发排行榜的命令关键词，多个命令用英文逗号分隔'),
         ctx.NapCatConfig.number('leaderboardTopCount', '排行榜显示数量', 10, '排行榜显示前几名（1-50）'),
+        ctx.NapCatConfig.select('leaderboardReplyMode', '排行榜回复模式', [
+            { label: '文字', value: 'text' },
+            { label: '图片', value: 'image' },
+            { label: '自动（优先图片）', value: 'auto' },
+        ], 'auto', '选择排行榜的展示方式，auto模式下会优先尝试生成图片'),
     );
 }

@@ -127,6 +127,59 @@ export default function ConfigPage() {
                 </div>
             </div>
 
+            {/* 签到时间设置 */}
+            <div className="card p-5 hover-lift">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
+                    ⏰ 签到时间设置
+                </h3>
+                <div className="space-y-5">
+                    <InputRow
+                        label="每日刷新时间（小时）"
+                        desc="每天几点开始算新的一天（0-23），默认0点"
+                        value={String(config.checkinRefreshTime?.hour ?? 0)}
+                        type="number"
+                        onChange={(v) => {
+                            const num = Math.max(0, Math.min(23, Number(v) || 0))
+                            updateField('checkinRefreshTime', { ...config.checkinRefreshTime, hour: num })
+                        }}
+                    />
+                    <InputRow
+                        label="每日刷新时间（分钟）"
+                        desc="每天几分开始算新的一天（0-59），默认0分"
+                        value={String(config.checkinRefreshTime?.minute ?? 0)}
+                        type="number"
+                        onChange={(v) => {
+                            const num = Math.max(0, Math.min(59, Number(v) || 0))
+                            updateField('checkinRefreshTime', { ...config.checkinRefreshTime, minute: num })
+                        }}
+                    />
+                    <SelectRow
+                        label="签到周期类型"
+                        desc="设置签到周期"
+                        value={config.checkinRefreshTime?.cycleType || 'daily'}
+                        options={[
+                            { value: 'daily', label: '每日' },
+                            { value: 'weekly', label: '每周' },
+                            { value: 'monthly', label: '每月' },
+                        ]}
+                        onChange={(v) => updateField('checkinRefreshTime', { 
+                            ...config.checkinRefreshTime, 
+                            cycleType: v as 'daily' | 'weekly' | 'monthly' 
+                        })}
+                    />
+                    <InputRow
+                        label="周期内可签到次数"
+                        desc="每个周期内可以签到的次数（1=每天1次，2=每天2次等）"
+                        value={String(config.checkinRefreshTime?.cycleCount ?? 1)}
+                        type="number"
+                        onChange={(v) => {
+                            const num = Math.max(1, Number(v) || 1)
+                            updateField('checkinRefreshTime', { ...config.checkinRefreshTime, cycleCount: num })
+                        }}
+                    />
+                </div>
+            </div>
+
             {/* 积分设置 */}
             <div className="card p-5 hover-lift">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
@@ -197,6 +250,48 @@ export default function ConfigPage() {
                         value={String(config.checkinPoints?.weekendBonus ?? 5)}
                         type="number"
                         onChange={(v) => updateField('checkinPoints', { ...config.checkinPoints, weekendBonus: Number(v) || 5 })}
+                    />
+                </div>
+            </div>
+
+            {/* 排行榜设置 */}
+            <div className="card p-5 hover-lift">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
+                    🏆 排行榜设置
+                </h3>
+                <div className="space-y-5">
+                    <ToggleRow
+                        label="启用排行榜功能"
+                        desc="是否启用积分排行榜功能"
+                        checked={config.enableLeaderboard ?? true}
+                        onChange={(v) => updateField('enableLeaderboard', v)}
+                    />
+                    <InputRow
+                        label="排行榜命令列表"
+                        desc="触发排行榜的命令关键词，多个命令用英文逗号分隔"
+                        value={config.leaderboardCommands || '排行榜,排行,rank'}
+                        onChange={(v) => updateField('leaderboardCommands', v)}
+                    />
+                    <InputRow
+                        label="排行榜显示数量"
+                        desc="排行榜显示前几名（1-50）"
+                        value={String(config.leaderboardTopCount ?? 10)}
+                        type="number"
+                        onChange={(v) => {
+                            const num = Math.max(1, Math.min(50, Number(v) || 10))
+                            updateField('leaderboardTopCount', num)
+                        }}
+                    />
+                    <SelectRow
+                        label="排行榜回复模式"
+                        desc="选择排行榜的展示方式，auto模式下会优先尝试生成图片"
+                        value={config.leaderboardReplyMode || 'auto'}
+                        options={[
+                            { value: 'auto', label: '自动（优先图片）' },
+                            { value: 'text', label: '文字' },
+                            { value: 'image', label: '图片' },
+                        ]}
+                        onChange={(v) => updateField('leaderboardReplyMode', v as 'text' | 'image' | 'auto')}
                     />
                 </div>
             </div>

@@ -261,7 +261,7 @@ function escapeHtml(text: string): string {
 /**
  * 将模板变量替换为实际数据
  */
-function replaceTemplateVariables(template: string, data: Record<string, string | number>): string {
+export function replaceTemplateVariables(template: string, data: Record<string, string | number>): string {
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
         const value = data[key];
         return value !== undefined ? String(value) : match;
@@ -369,6 +369,39 @@ export async function renderCheckinCard(data: CheckinCardData): Promise<Buffer |
         
     } catch (error) {
         pluginState.logger.error('调用 Puppeteer 失败:', error instanceof Error ? error.message : String(error));
+        return null;
+    }
+}
+
+/**
+ * 调用 Puppeteer 插件渲染排行榜卡片
+ */
+export async function renderLeaderboardCard(data: import('../types').LeaderboardData): Promise<Buffer | null> {
+    try {
+        pluginState.logger.info('开始调用 Puppeteer 渲染排行榜卡片...');
+        
+        // 导入 leaderboard-service 生成 HTML
+        const { generateLeaderboardHTML } = await import('./leaderboard-service');
+        const html = generateLeaderboardHTML(data);
+        
+        const result = await renderHtmlToImage(html, {
+            width: 480,
+            height: 820,
+            deviceScaleFactor: 2,
+        });
+        
+        if (!result) {
+            return null;
+        }
+        
+        pluginState.logger.info(`Puppeteer 渲染排行榜成功，耗时 ${result.time}ms`);
+        
+        // 将 Base64 转换为 Buffer
+        const base64Data = result.image.replace(/^data:image\/\w+;base64,/, '');
+        return Buffer.from(base64Data, 'base64');
+        
+    } catch (error) {
+        pluginState.logger.error('调用 Puppeteer 渲染排行榜失败:', error instanceof Error ? error.message : String(error));
         return null;
     }
 }

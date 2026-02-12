@@ -143,37 +143,182 @@ export default function HelpPage() {
                     <IconCode className="text-blue-500" size={24} />
                     命令列表
                 </h2>
-                <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                
+                {/* 基础命令 */}
+                <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        基础签到命令
+                    </h3>
                     <div className="space-y-1">
                         <CommandItem
                             command="签到"
-                            description="每日签到，获取随机积分"
-                            example="触发精美签到卡片"
+                            description="每日签到，获取随机积分（10-50分）"
+                            example="支持自定义命令词：签到、打卡、sign、checkin"
                         />
                         <CommandItem
                             command="#cmd 我的积分"
-                            description="查询个人积分和签到数据"
-                        />
-                        <CommandItem
-                            command="#cmd 积分排行"
-                            description="查看群内积分排行（仅群聊）"
-                        />
-                        <CommandItem
-                            command="#cmd 活跃排行"
-                            description="查看全服活跃排行（识别忠实用户）"
-                        />
-                        <CommandItem
-                            command="#cmd 开启签到"
-                            description="开启本群签到功能（群主/管理员）"
-                        />
-                        <CommandItem
-                            command="#cmd 关闭签到"
-                            description="关闭本群签到功能（群主/管理员）"
+                            description="查询个人积分、签到天数、连续签到等详细数据"
                         />
                         <CommandItem
                             command="#cmd help"
-                            description="查看帮助信息"
+                            description="查看插件帮助信息和所有可用命令"
                         />
+                    </div>
+                </div>
+
+                {/* 排行榜命令 */}
+                <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        排行榜命令
+                    </h3>
+                    <div className="space-y-1">
+                        <CommandItem
+                            command="#cmd 周榜"
+                            description="查看本周群内积分排行榜"
+                            example="显示本周积分TOP用户，附带个人排名"
+                        />
+                        <CommandItem
+                            command="#cmd 月榜"
+                            description="查看本月群内积分排行榜"
+                            example="显示本月积分TOP用户，附带个人排名"
+                        />
+                        <CommandItem
+                            command="#cmd 年榜"
+                            description="查看本年度群内积分排行榜"
+                            example="显示年度积分TOP用户，附带个人排名"
+                        />
+                        <CommandItem
+                            command="#cmd 总榜"
+                            description="查看群内总积分排行榜"
+                            example="显示历史总积分TOP用户，附带个人排名"
+                        />
+                        <CommandItem
+                            command="排行榜 / 排行 / rank"
+                            description="快捷查看排行榜（可在配置中自定义命令词）"
+                            example="默认显示周榜，支持在插件配置中修改"
+                        />
+                        <CommandItem
+                            command="#cmd 积分排行"
+                            description="查看全服积分排行TOP100"
+                            example="跨群统计，显示所有用户的积分排名"
+                        />
+                        <CommandItem
+                            command="#cmd 活跃排行"
+                            description="查看全服活跃排行TOP100"
+                            example="按使用天数排序，识别最忠实的用户"
+                        />
+                    </div>
+                </div>
+
+                {/* 管理命令 */}
+                <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                        群管理命令（仅群主/管理员）
+                    </h3>
+                    <div className="space-y-1">
+                        <CommandItem
+                            command="#cmd 开启签到"
+                            description="开启本群签到功能"
+                            example="开启后群成员可以使用签到命令"
+                        />
+                        <CommandItem
+                            command="#cmd 关闭签到"
+                            description="关闭本群签到功能"
+                            example="关闭后群成员无法使用签到命令"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            {/* WebUI 功能说明 */}
+            <section>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <IconCheck className="text-purple-500" size={24} />
+                    WebUI 功能介绍
+                </h2>
+                <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">📊 仪表盘</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            查看插件运行状态、今日处理消息数、累计处理消息数、插件运行时长等统计信息。
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">⚙️ 插件配置</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            可视化配置所有参数：基础设置、签到功能、签到时间、积分规则、连续签到加成、周末加成、排行榜设置等。
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">👥 群管理</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            查看所有群的群头像、群名称、群号、成员数，管理各群的签到功能开关，支持批量启用/禁用。
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">📈 排行榜查看</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            积分榜、活跃榜、分群排行。点击用户头像可查看详细信息：累计积分、签到天数、连续签到、最近签到记录等。
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">🎨 模板编辑</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            可视化编辑签到卡片和排行榜卡片的 HTML 模板，支持实时预览。提供丰富的模板变量，支持自定义样式。
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">📚 接口文档</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            查看完整的 API 接口文档，包含请求/响应格式和示例代码，方便其他插件集成。
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            {/* 配置项说明 */}
+            <section>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <IconLightbulb className="text-orange-500" size={24} />
+                    主要配置项说明
+                </h2>
+                <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 dark:bg-[#0f0f10] rounded-lg">
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">签到回复模式</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                自动：优先使用图片卡片，失败时降级为文字<br/>
+                                图片：强制使用图片卡片（需安装 Puppeteer 插件）<br/>
+                                文字：只发送文字回复
+                            </div>
+                        </div>
+                        <div className="p-3 bg-gray-50 dark:bg-[#0f0f10] rounded-lg">
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">签到时间设置</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                可自定义每日刷新时间（默认0点）<br/>
+                                支持每日/每周/每月不同周期<br/>
+                                可设置每个周期内可签到次数
+                            </div>
+                        </div>
+                        <div className="p-3 bg-gray-50 dark:bg-[#0f0f10] rounded-lg">
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">连续签到加成</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                每天额外 +N 积分（默认+2）<br/>
+                                可设置加成上限（默认上限+20）<br/>
+                                激励用户坚持每日打卡
+                            </div>
+                        </div>
+                        <div className="p-3 bg-gray-50 dark:bg-[#0f0f10] rounded-lg">
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">排行榜回复模式</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                支持文字/图片/自动三种模式<br/>
+                                图片模式展示精美的排行榜卡片<br/>
+                                可自定义排行榜命令关键词
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -214,17 +359,35 @@ const result = await fetch('/plugin/napcat-plugin-checkin/api/checkin/groups/123
                     <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white mb-3">自定义模板</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            在"模板编辑"页面可以自定义签到卡片的 HTML 模板，支持以下变量：
+                            插件支持自定义签到卡片和排行榜卡片的 HTML 模板：
                         </p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-                            {['{{nickname}}', '{{userId}}', '{{totalPoints}}', '{{totalDays}}', 
-                              '{{todayRank}}', '{{checkinTime}}', '{{currentDate}}', '{{quote}}'].map((variable) => (
-                                <code key={variable} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-brand-600 dark:text-brand-400 rounded text-xs text-center">
-                                    {variable}
-                                </code>
-                            ))}
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">签到模板变量：</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                    {['{{nickname}}', '{{userId}}', '{{totalPoints}}', '{{totalDays}}', 
+                                      '{{todayRank}}', '{{checkinTime}}', '{{currentDate}}', '{{quote}}'].map((variable) => (
+                                        <code key={variable} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-brand-600 dark:text-brand-400 rounded text-xs text-center">
+                                            {variable}
+                                        </code>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">排行榜模板特殊变量：</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+                                    {['{{typeName}}', '{{groupId}}', '{{usersHtml}}', '{{myRankHtml}}', '{{maxPoints}}'].map((variable) => (
+                                        <code key={variable} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-brand-600 dark:text-brand-400 rounded text-xs text-center">
+                                            {variable}
+                                        </code>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                    {'{{usersHtml}}'} 和 {'{{myRankHtml}}'} 会自动生成用户列表和个人状态栏的 HTML
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
                             <p className="text-sm text-blue-800 dark:text-blue-200">
                                 <strong>依赖说明：</strong>如需使用图片打卡功能，需要安装 
                                 <a href="https://github.com/AQiaoYo/napcat-plugin-puppeteer" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">

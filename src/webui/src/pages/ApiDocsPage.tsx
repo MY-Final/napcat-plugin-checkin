@@ -301,10 +301,11 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/template/preview',
     title: '预览模板',
-    description: '预览自定义HTML模板渲染效果',
+    description: '预览自定义HTML模板渲染效果。支持签到卡片和排行榜卡片两种类型',
     params: [
       { name: 'template', type: 'string', required: true, description: 'HTML模板字符串' },
       { name: 'data', type: 'object', required: false, description: '模板变量数据' },
+      { name: 'type', type: 'string', required: false, description: '模板类型: checkin | leaderboard (默认checkin)' },
     ],
     response: `{
   "code": 0,
@@ -313,12 +314,27 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     "time": 150
   }
 }`,
-    example: `{
+    example: `// 签到卡片
+{
   "template": "<html>...{{nickname}}...</html>",
   "data": {
     "nickname": "Final",
     "earnedPoints": 21
   }
+}
+
+// 排行榜卡片
+{
+  "template": "<html>...{{typeName}}...</html>",
+  "data": {
+    "type": "week",
+    "typeName": "本周排行榜",
+    "groupId": "123456",
+    "usersJson": "[{rank:1,nickname:\"User1\",...}]",
+    "myRankJson": "{rank:5,nickname:\"Me\",...}",
+    "maxPoints": "1000"
+  },
+  "type": "leaderboard"
 }`
   },
 ]
@@ -343,6 +359,20 @@ const TEMPLATE_VARIABLES = [
   { name: '{{basePoints}}', description: '本次基础积分（不含加成）' },
   { name: '{{consecutiveBonus}}', description: '连续签到加成' },
   { name: '{{weekendBonus}}', description: '周末加成' },
+]
+
+const LEADERBOARD_TEMPLATE_VARIABLES = [
+  { name: '{{type}}', description: '排行榜类型(week/month/year/all)' },
+  { name: '{{typeName}}', description: '排行榜类型名称(如"本周排行榜")' },
+  { name: '{{groupId}}', description: '群ID' },
+  { name: '{{groupName}}', description: '群名称' },
+  { name: '{{updateTime}}', description: '更新时间' },
+  { name: '{{usersJson}}', description: '用户列表JSON字符串' },
+  { name: '{{usersHtml}}', description: '生成的用户列表HTML(自动转换)' },
+  { name: '{{myRankJson}}', description: '我的排名JSON字符串' },
+  { name: '{{myRankHtml}}', description: '生成的个人状态栏HTML(自动转换)' },
+  { name: '{{hasMyRank}}', description: '是否有我的排名(true/false)' },
+  { name: '{{maxPoints}}', description: '最高积分(用于进度条)' },
 ]
 
 function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
@@ -631,10 +661,24 @@ const result = await response.json();
                 </pre>
               </div>
 
-              <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">模板变量</h3>
+              <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">签到模板变量</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {TEMPLATE_VARIABLES.map((variable) => (
+                    <div key={variable.name} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-[#0f0f10] rounded">
+                      <code className="text-brand-600 dark:text-brand-400 font-mono text-sm bg-brand-50 dark:bg-brand-900/20 px-1.5 py-0.5 rounded">
+                        {variable.name}
+                      </code>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{variable.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-[#1a1b1d] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">排行榜模板变量</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {LEADERBOARD_TEMPLATE_VARIABLES.map((variable) => (
                     <div key={variable.name} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-[#0f0f10] rounded">
                       <code className="text-brand-600 dark:text-brand-400 font-mono text-sm bg-brand-50 dark:bg-brand-900/20 px-1.5 py-0.5 rounded">
                         {variable.name}

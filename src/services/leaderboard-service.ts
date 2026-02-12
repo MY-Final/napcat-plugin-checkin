@@ -220,12 +220,53 @@ export function generateLeaderboardText(data: LeaderboardData): string {
 }
 
 /**
- * 生成排行榜 HTML
+ * 使用自定义模板生成排行榜 HTML
  */
-export function generateLeaderboardHTML(data: LeaderboardData): string {
+export function generateLeaderboardHTMLWithTemplate(
+    data: LeaderboardData,
+    template: string
+): string {
     const maxPoints = data.users.length > 0 ? data.users[0].periodPoints : 1;
     
-    const usersHtml = data.users.map(user => {
+    // 准备模板数据
+    const templateData: Record<string, string> = {
+        type: data.type,
+        typeName: data.typeName,
+        groupId: data.groupId,
+        groupName: data.groupName,
+        updateTime: data.updateTime,
+        usersJson: JSON.stringify(data.users),
+        myRankJson: data.myRank ? JSON.stringify(data.myRank) : '',
+        hasMyRank: data.myRank ? 'true' : 'false',
+        maxPoints: String(maxPoints),
+    };
+    
+    // 替换简单变量
+    let html = template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+        const value = templateData[key];
+        return value !== undefined ? value : match;
+    });
+    
+    // 生成用户列表 HTML（如果模板中包含 {{usersHtml}}）
+    if (html.includes('{{usersHtml}}')) {
+        const usersHtml = generateUsersHtml(data.users, maxPoints);
+        html = html.replace('{{usersHtml}}', usersHtml);
+    }
+    
+    // 生成我的排名 HTML（如果模板中包含 {{myRankHtml}}）
+    if (html.includes('{{myRankHtml}}')) {
+        const myRankHtml = data.myRank ? generateMyRankHtml(data.myRank) : '';
+        html = html.replace('{{myRankHtml}}', myRankHtml);
+    }
+    
+    return html;
+}
+
+/**
+ * 生成用户列表 HTML
+ */
+function generateUsersHtml(users: LeaderboardUser[], maxPoints: number): string {
+    return users.map(user => {
         const barWidth = maxPoints > 0 ? (user.periodPoints / maxPoints) * 100 : 0;
         const rankClass = user.rank <= 3 ? `rank-${user.rank}` : '';
         
@@ -247,21 +288,42 @@ export function generateLeaderboardHTML(data: LeaderboardData): string {
         </div>
         `;
     }).join('');
-    
-    const myStatusHtml = data.myRank ? `
+}
+
+/**
+ * 生成我的排名 HTML
+ */
+function generateMyRankHtml(myRank: LeaderboardUser): string {
+    return `
     <div class="my-status">
-        <div class="my-rank-tag">RANK ${data.myRank.rank}</div>
-        <img class="my-avatar" src="${data.myRank.avatarUrl}" alt="my avatar">
+        <div class="my-rank-tag">RANK ${myRank.rank}</div>
+        <img class="my-avatar" src="${myRank.avatarUrl}" alt="my avatar">
         <div class="my-info">
-            <div class="my-name">${escapeHtml(data.myRank.nickname)} (我)</div>
-            <div class="my-id">ID: ${data.myRank.userId}</div>
+            <div class="my-name">${escapeHtml(myRank.nickname)} (我)</div>
+            <div class="my-id">ID: ${myRank.userId}</div>
         </div>
         <div style="text-align: right;">
-            <span class="my-points-val">${data.myRank.periodPoints.toLocaleString()}</span>
+            <span class="my-points-val">${myRank.periodPoints.toLocaleString()}</span>
             <span class="my-points-label">MY SCORE</span>
         </div>
     </div>
-    ` : '';
+    `;
+}
+
+/**
+ * 生成排行榜 HTML
+ */
+export function generateLeaderboardHTML(data: LeaderboardData): string {
+    // 检查是否有自定义模板
+    const customTemplate = pluginState.config.customLeaderboardTemplate;
+    if (customTemplate) {
+        return generateLeaderboardHTMLWithTemplate(data, customTemplate);
+    }
+    
+    // 使用默认模板
+    const maxPoints = data.users.length > 0 ? data.users[0].periodPoints : 1;
+    const usersHtml = generateUsersHtml(data.users, maxPoints);
+    const myStatusHtml = data.myRank ? generateMyRankHtml(data.myRank) : '';
     
     return `<!DOCTYPE html>
 <html lang="zh-CN">

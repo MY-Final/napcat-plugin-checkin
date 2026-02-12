@@ -11,8 +11,9 @@ import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
 import { handleCheckinCommand, handleCheckinAdmin, handleCheckinQuery, handleActiveRankingQuery } from './checkin-handler';
-import { getCheckinCommands, type LeaderboardType } from '../types';
+import { getCheckinCommands, type LeaderboardType, type LeaderboardData } from '../types';
 import { getLeaderboard, parseLeaderboardCommand, generateLeaderboardText, generateLeaderboardHTML } from '../services/leaderboard-service';
+import { renderLeaderboardCard } from '../services/puppeteer-service';
 
 // ==================== CD 冷却管理 ====================
 
@@ -340,13 +341,8 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 };
                 const lbType = typeMap[subCommand] || 'week';
                 
-                // 获取排行榜数据
-                const userId = String(event.user_id);
-                const leaderboardData = getLeaderboard(String(groupId), lbType, userId);
-                
-                // 生成排行榜文本
-                const text = generateLeaderboardText(leaderboardData);
-                await sendReply(ctx, event, text);
+                // 发送排行榜
+                await sendLeaderboard(ctx, event, String(groupId), lbType);
                 
                 pluginState.incrementProcessed();
                 break;
@@ -357,10 +353,7 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 if (pluginState.config.enableLeaderboard) {
                     const leaderboardType = parseLeaderboardCommand(rawMessage);
                     if (leaderboardType && messageType === 'group' && groupId) {
-                        const userId = String(event.user_id);
-                        const leaderboardData = getLeaderboard(String(groupId), leaderboardType, userId);
-                        const text = generateLeaderboardText(leaderboardData);
-                        await sendReply(ctx, event, text);
+                        await sendLeaderboard(ctx, event, String(groupId), leaderboardType);
                         pluginState.incrementProcessed();
                         return;
                     }
@@ -371,5 +364,58 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
         }
     } catch (error) {
         pluginState.logger.error('处理消息时出错:', error);
+    }
+}
+
+// ==================== 排行榜发送 ====================
+
+/**
+ * 发送排行榜（根据配置选择文字或图片）
+ */
+async function sendLeaderboard(
+    ctx: NapCatPluginContext,
+    event: OB11Message,
+    groupId: string,
+    lbType: LeaderboardType
+): Promise<void> {
+    const userId = String(event.user_id);
+    const leaderboardData = getLeaderboard(groupId, lbType, userId);
+    
+    // 根据配置决定发送方式
+    const replyMode = pluginState.config.leaderboardReplyMode || 'auto';
+    let useImageMode = false;
+    
+    if (replyMode === 'image') {
+        useImageMode = true;
+    } else if (replyMode === 'auto') {
+        // auto 模式下，尝试生成图片，如果成功则使用图片
+        const imageBuffer = await renderLeaderboardCard(leaderboardData);
+        useImageMode = imageBuffer !== null;
+    }
+    // replyMode === 'text' 时 useImageMode 保持 false
+    
+    if (useImageMode) {
+        // 图片模式
+        const imageBuffer = await renderLeaderboardCard(leaderboardData);
+        if (imageBuffer) {
+            const base64Image = imageBuffer.toString('base64');
+            const message: OB11PostSendMsg['message'] = [
+                {
+                    type: 'image',
+                    data: {
+                        file: `base64://${base64Image}`,
+                    },
+                },
+            ];
+            await sendReply(ctx, event, message);
+        } else {
+            // 图片生成失败，降级为文字
+            const text = generateLeaderboardText(leaderboardData);
+            await sendReply(ctx, event, text);
+        }
+    } else {
+        // 文字模式
+        const text = generateLeaderboardText(leaderboardData);
+        await sendReply(ctx, event, text);
     }
 }

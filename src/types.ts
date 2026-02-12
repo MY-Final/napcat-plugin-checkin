@@ -87,6 +87,10 @@ export interface PluginConfig {
     checkinReplyMode: 'text' | 'image' | 'auto';
     /** 自定义 HTML 模板（可选） */
     customHtmlTemplate?: string;
+    /** 自定义排行榜 HTML 模板（可选） */
+    customLeaderboardTemplate?: string;
+    /** 排行榜回复模式：text=文字, image=图片, auto=自动 */
+    leaderboardReplyMode: 'text' | 'image' | 'auto';
     /** 签到刷新时间配置 */
     checkinRefreshTime: CheckinRefreshTimeConfig;
     /** 是否启用排行榜功能 */
@@ -387,4 +391,32 @@ export interface LeaderboardData {
     users: LeaderboardUser[];
     /** 当前用户排名 */
     myRank?: LeaderboardUser;
+}
+
+/**
+ * 排行榜卡片数据（用于模板渲染）
+ */
+export interface LeaderboardCardData {
+    /** 排行榜类型 */
+    type: LeaderboardType;
+    /** 类型名称 */
+    typeName: string;
+    /** 群ID */
+    groupId: string;
+    /** 群名称 */
+    groupName: string;
+    /** 更新时间 */
+    updateTime: string;
+    /** 用户列表（JSON字符串，用于模板循环） */
+    users: LeaderboardUser[];
+    /** 用户列表JSON字符串 */
+    usersJson: string;
+    /** 当前用户排名 */
+    myRank?: LeaderboardUser;
+    /** 当前用户排名JSON字符串 */
+    myRankJson: string;
+    /** 是否有当前用户排名 */
+    hasMyRank: boolean;
+    /** 最高积分（用于进度条） */
+    maxPoints: number;
 }
