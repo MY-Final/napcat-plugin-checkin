@@ -6,7 +6,6 @@ import StatusPage from './pages/StatusPage'
 import HelpPage from './pages/HelpPage'
 import ConfigPage from './pages/ConfigPage'
 import GroupsPage from './pages/GroupsPage'
-import PointsRankingPage from './pages/PointsRankingPage'
 import ActiveRankingPage from './pages/ActiveRankingPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import CheckinDataPage from './pages/CheckinDataPage'
@@ -17,7 +16,7 @@ import BalancePage from './pages/BalancePage'
 import { useStatus } from './hooks/useStatus'
 import { useTheme } from './hooks/useTheme'
 
-export type PageId = 'status' | 'help' | 'config' | 'groups' | 'leaderboard' | 'points-ranking' | 'active-ranking' | 'checkin' | 'balance' | 'template' | 'leaderboard-template' | 'apidocs'
+export type PageId = 'status' | 'help' | 'config' | 'groups' | 'leaderboard' | 'active-ranking' | 'checkin' | 'balance' | 'template' | 'leaderboard-template' | 'apidocs'
 
 const pageConfig: Record<PageId, { title: string; desc: string }> = {
     status: { title: '仪表盘', desc: '插件运行状态与数据概览' },
@@ -25,7 +24,6 @@ const pageConfig: Record<PageId, { title: string; desc: string }> = {
     config: { title: '插件配置', desc: '基础设置与参数配置' },
     groups: { title: '群管理', desc: '管理群的启用与禁用' },
     leaderboard: { title: '排行榜', desc: '查看周榜、月榜、年榜和总榜' },
-    'points-ranking': { title: '积分排行', desc: '查看全服积分排行榜' },
     'active-ranking': { title: '活跃排行', desc: '查看全服活跃排行榜（识别忠实用户）' },
     checkin: { title: '分群排行', desc: '查看各群的签到排行' },
     balance: { title: '我的余额', desc: '查看用户在各群的余额详情' },
@@ -58,7 +56,6 @@ function App() {
             case 'config': return <ConfigPage />
             case 'groups': return <GroupsPage />
             case 'leaderboard': return <LeaderboardPage />
-            case 'points-ranking': return <PointsRankingPage />
             case 'active-ranking': return <ActiveRankingPage />
             case 'checkin': return <CheckinDataPage />
             case 'balance': return <BalancePage />

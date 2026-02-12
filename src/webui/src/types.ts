@@ -78,15 +78,6 @@ export interface ApiResponse<T = unknown> {
 
 // ==================== 签到数据类型 ====================
 
-export interface UserRanking {
-    userId: string
-    nickname: string
-    activeDays: number
-    totalCheckinDays: number
-    lastActiveDate: string
-    firstGroupId: string
-}
-
 export interface GroupUserInfo {
     userId: string
     nickname: string
@@ -110,11 +101,6 @@ export interface CheckinStats {
     totalCheckins: number
     todayCheckins: number
     activeUsers: number
-}
-
-export interface RankingData {
-    totalUsers: number
-    ranking: UserRanking[]
 }
 
 // 活跃排行
