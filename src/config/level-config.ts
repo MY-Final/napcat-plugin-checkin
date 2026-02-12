@@ -216,10 +216,13 @@ export function getExpToNextLevel(currentExp: number): number | undefined {
 
 /**
  * 计算签到加成
+ * @param basePoints 基础积分
+ * @param level 用户等级
+ * @returns 加成后的总积分（基础积分 + 等级加成）
  */
 export function calculateSigninBonus(basePoints: number, level: number): number {
     const levelConfig = LEVEL_CONFIG.find(l => l.level === level);
     if (!levelConfig) return basePoints;
-    
+
     return basePoints + levelConfig.privileges.signinBonus;
 }

@@ -192,7 +192,7 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 const commandsText = commands.join(' / ');
                 
                 let helpText = [
-                    `📋 签到插件帮助`,
+                    `签到插件帮助`,
                     ``,
                     `【基本功能】`,
                     `${commandsText} - 每日签到，获取积分`,
@@ -279,7 +279,7 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
                 
                 const enable = subCommand === '开启签到';
                 pluginState.updateGroupConfig(String(groupId), { enableCheckin: enable });
-                await sendReply(ctx, event, `✅ 已${enable ? '开启' : '关闭'}本群签到功能`);
+                await sendReply(ctx, event, `(｡･ω･｡) 已${enable ? '开启' : '关闭'}本群签到功能`);
                 pluginState.logger.info(`群 ${groupId} 签到功能已${enable ? '开启' : '关闭'}`);
                 break;
             }

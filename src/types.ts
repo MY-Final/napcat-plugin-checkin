@@ -307,10 +307,14 @@ export interface PluginConfig {
  * 获取签到命令列表（从逗号分隔的字符串解析）
  */
 export function getCheckinCommands(config: { checkinCommands?: string; checkinCommand?: string }): string[] {
+    // 优先使用新的复数配置
     if (config.checkinCommands) {
-        return config.checkinCommands.split(',').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
+        const commands = config.checkinCommands.split(',').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
+        if (commands.length > 0) {
+            return commands;
+        }
     }
-    // 向后兼容
+    // 向后兼容：使用旧的单数配置
     if (config.checkinCommand) {
         return [config.checkinCommand];
     }

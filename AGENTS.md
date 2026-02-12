@@ -131,8 +131,6 @@ ctx.router.page({ path: 'dashboard', title: '仪表盘', htmlFile: 'webui/index.
 ## 重要约束
 
 ### 禁止 Emoji 政策
-- **代码中禁止使用 Unicode emoji**（❌ `✅`, `🚀`, `📁`）
-- **后端日志**: 使用颜文字（如 `(｡･ω･｡)`, `(╥﹏╥)`）
 - **前端图标**: 仅使用 SVG
 - **转义**: 含反引号的颜文字必须转义或使用字符串拼接
   ```typescript

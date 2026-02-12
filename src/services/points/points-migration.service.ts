@@ -23,7 +23,7 @@ const BALANCE_RATE = 0.2;  // 20%赠送策略
 // ==================== 辅助函数 ====================
 
 function generateUUID(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 function formatDate(date: Date): string {
@@ -120,29 +120,33 @@ export class PointsMigrationService {
             // 基础信息
             userId: oldData.userId,
             nickname: oldData.nickname,
-            
+
             // 双轨制积分
             totalExp: totalExp,
             balance: balance,
-            
+
             // 等级信息
             level: levelInfo.level,
             levelName: levelInfo.name,
             levelIcon: levelInfo.icon,
-            
+
             // 称号信息
             equippedTitleId: undefined,
             titles: [] as UserTitle[],
-            
+
             // 统计数据
             totalCheckinDays: oldData.totalCheckinDays || 0,
             consecutiveDays: oldData.consecutiveDays || 0,
             lastCheckinDate: oldData.lastCheckinDate || '',
             checkinHistory: oldData.checkinHistory || [],
-            
+
+            // 活跃天数统计
+            activeDays: oldData.activeDays || 0,
+            lastActiveDate: oldData.lastActiveDate || '',
+
             // 交易流水
             transactionLog: transactionLog,
-            
+
             // 数据版本
             dataVersion: CURRENT_VERSION,
             migratedAt: formatDate(new Date()),

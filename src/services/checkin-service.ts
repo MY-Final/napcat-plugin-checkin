@@ -726,7 +726,7 @@ export function updateGroupUserPoints(
 
         const now = new Date();
         userData.transactionLog.unshift({
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
             timestamp: now.getTime(),
             date: now.toISOString().split('T')[0],
             time: now.toTimeString().split(' ')[0],
@@ -834,7 +834,7 @@ export function resetGroupUserPoints(
 
         const now = new Date();
         userData.transactionLog.unshift({
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
             timestamp: now.getTime(),
             date: now.toISOString().split('T')[0],
             time: now.toTimeString().split(' ')[0],

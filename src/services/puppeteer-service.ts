@@ -247,7 +247,6 @@ function generateCheckinHtml(data: CheckinCardData): string {
  * 转义 HTML 特殊字符
  */
 function escapeHtml(text: string): string {
-    const div = { replace: (s: string) => s };
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
