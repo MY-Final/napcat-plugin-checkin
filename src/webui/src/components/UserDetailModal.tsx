@@ -97,16 +97,6 @@ export default function UserDetailModal({ userId, nickname, groupId, onClose }: 
             ) : userData ? (
               <>
                 {/* 统计卡片 */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-brand-500">{userData.totalPoints}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">累计积分</div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-green-500">{userData.balance || 0}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">总余额</div>
-                  </div>
-                </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
                     <div className="text-lg font-bold text-blue-500">{userData.totalCheckinDays}</div>
