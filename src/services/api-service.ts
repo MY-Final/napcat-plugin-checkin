@@ -18,6 +18,7 @@ import { registerLeaderboardRoutes } from './api/leaderboard-routes';
 import { registerTemplateRoutes } from './api/template-routes';
 import { registerTemplateManageRoutes } from './api/template-manage-routes';
 import { registerV1Routes } from './api/v1-routes';
+import { registerLogRoutes } from './api/log-routes';
 
 /**
  * 注册 API 路由
@@ -58,6 +59,9 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
     
     // v1 API (双轨制积分系统)
     registerV1Routes(ctx);
+    
+    // 签到日志
+    registerLogRoutes(ctx);
 
     ctx.logger.debug('API 路由注册完成');
 }

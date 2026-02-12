@@ -7,9 +7,9 @@ import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
 import type { UserCheckinData, GroupUserCheckinData } from '../types';
-import { 
-    performCheckin, 
-    getUserCheckinData, 
+import {
+    performCheckin,
+    getUserCheckinData,
     getGroupUserCheckinData,
     getAllUsersData,
     getGroupAllUsersData,
@@ -23,6 +23,7 @@ import { renderCheckinCard, getAvatarUrl } from '../services/puppeteer-service';
 import { getRandomQuote } from '../utils/checkin-messages';
 import { sendReply } from './message-handler';
 import type { CheckinCardData } from '../types';
+import { createCheckinLog, isGroupLogEnabled } from '../services/log-service';
 
 // CD 冷却管理
 const cooldownMap = new Map<string, number>();
@@ -189,6 +190,35 @@ export async function handleCheckinCommand(
         } else {
             // 文字模式：发送文字签到结果
             await sendTextCheckinResult(ctx, event, cardData, result.consecutiveDays);
+        }
+
+        // 记录签到日志
+        if (groupId) {
+            pluginState.logger.info(`[签到日志] 开始记录日志，groupId=${groupId}`);
+            const enabled = isGroupLogEnabled(groupId);
+            pluginState.logger.info(`[签到日志] 日志启用状态: ${enabled}`);
+            if (enabled) {
+                createCheckinLog({
+                    userId: userId,
+                    nickname: nickname,
+                    groupId: groupId,
+                    groupName: groupName || groupId,
+                    earnedPoints: result.earnedPoints,
+                    consecutiveDays: result.consecutiveDays,
+                    totalPoints: displayTotalPoints,
+                    totalDays: result.userData.totalCheckinDays,
+                    basePoints: result.breakdown?.base || result.earnedPoints,
+                    consecutiveBonus: result.breakdown?.consecutiveBonus || 0,
+                    weekendBonus: result.breakdown?.weekendBonus || 0,
+                    weekday: weekday,
+                    weekdayName: weekdayNames[weekday],
+                    isWeekend: isWeekend,
+                    quote: cardData.quote,
+                    replyMode: replyMode as 'text' | 'image' | 'auto',
+                    status: 'success',
+                });
+                pluginState.logger.info(`[签到日志] 日志记录完成`);
+            }
         }
 
         // 设置CD

@@ -20,6 +20,7 @@ import { buildConfigSchema } from './config';
 import { pluginState } from './core/state';
 import { handleMessage } from './handlers/message-handler';
 import { registerApiRoutes } from './services/api-service';
+import { registerTemplateManageRoutes } from './services/api/template-manage-routes';
 import type { PluginConfig } from './types';
 import { getCheckinCommands } from './types';
 
@@ -49,6 +50,7 @@ export const plugin_init: PluginModule['plugin_init'] = async (ctx) => {
 
         // 4. 注册 API 路由
         registerApiRoutes(ctx);
+        registerTemplateManageRoutes(ctx);
 
         ctx.logger.info('✅ 签到插件初始化完成');
         const commands = getCheckinCommands(pluginState.config);

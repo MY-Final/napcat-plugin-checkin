@@ -12,10 +12,11 @@ import CheckinDataPage from './pages/CheckinDataPage'
 import TemplateListPage from './pages/TemplateListPage'
 import ApiDocsPage from './pages/ApiDocsPage'
 import BalancePage from './pages/BalancePage'
+import LogsPage from './pages/LogsPage'
 import { useStatus } from './hooks/useStatus'
 import { useTheme } from './hooks/useTheme'
 
-export type PageId = 'status' | 'help' | 'config' | 'groups' | 'leaderboard' | 'active-ranking' | 'checkin' | 'balance' | 'template-list' | 'apidocs'
+export type PageId = 'status' | 'help' | 'config' | 'groups' | 'leaderboard' | 'active-ranking' | 'checkin' | 'balance' | 'template-list' | 'apidocs' | 'logs'
 
 const pageConfig: Record<PageId, { title: string; desc: string }> = {
     status: { title: '仪表盘', desc: '插件运行状态与数据概览' },
@@ -27,7 +28,8 @@ const pageConfig: Record<PageId, { title: string; desc: string }> = {
     checkin: { title: '分群排行', desc: '查看各群的签到排行' },
     balance: { title: '我的余额', desc: '查看用户在各群的余额详情' },
     'template-list': { title: '模板管理', desc: '管理签到和排行榜模板' },
-    apidocs: { title: '接口文档', desc: 'API 接口文档与调用参考' }
+    apidocs: { title: '接口文档', desc: 'API 接口文档与调用参考' },
+    logs: { title: '签到日志', desc: '查看签到记录与统计分析' }
 }
 
 function App() {
@@ -59,6 +61,7 @@ function App() {
             case 'balance': return <BalancePage />
             case 'template-list': return <TemplateListPage />
             case 'apidocs': return <ApiDocsPage />
+            case 'logs': return <LogsPage />
             default: return <StatusPage status={status} onRefresh={fetchStatus} />
         }
     }

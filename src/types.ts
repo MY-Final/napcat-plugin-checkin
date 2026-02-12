@@ -797,3 +797,182 @@ export interface LeaderboardCardData {
     /** 最高积分（用于进度条） */
     maxPoints: number;
 }
+
+// ==================== 签到日志系统 ====================
+
+/**
+ * 签到日志条目
+ */
+export interface CheckinLog {
+    /** 唯一ID */
+    id: string;
+    /** 用户QQ号 */
+    userId: string;
+    /** 用户昵称 */
+    nickname: string;
+    /** 群号 */
+    groupId: string;
+    /** 群名称 */
+    groupName: string;
+    /** Unix时间戳（毫秒） */
+    timestamp: number;
+    /** 日期 YYYY-MM-DD */
+    date: string;
+    /** 时间 HH:mm:ss */
+    time: string;
+    /** 本次获得积分 */
+    earnedPoints: number;
+    /** 连续签到天数 */
+    consecutiveDays: number;
+    /** 累计总积分 */
+    totalPoints: number;
+    /** 累计签到天数 */
+    totalDays: number;
+    /** 基础积分 */
+    basePoints: number;
+    /** 连续加成 */
+    consecutiveBonus: number;
+    /** 周末加成 */
+    weekendBonus: number;
+    /** 星期几（0-6） */
+    weekday: number;
+    /** 星期名称 */
+    weekdayName: string;
+    /** 是否周末 */
+    isWeekend: boolean;
+    /** 励志短句 */
+    quote: string;
+    /** 回复模式 */
+    replyMode: 'text' | 'image' | 'auto';
+    /** 状态 */
+    status: 'success' | 'failed';
+    /** 错误信息 */
+    errorMessage?: string;
+}
+
+/**
+ * 日志查询参数
+ */
+export interface LogQueryParams {
+    /** 页码（1开始） */
+    page?: number;
+    /** 每页条数 */
+    pageSize?: number;
+    /** 用户QQ号 */
+    userId?: string;
+    /** 群号 */
+    groupId?: string;
+    /** 开始日期 YYYY-MM-DD */
+    startDate?: string;
+    /** 结束日期 YYYY-MM-DD */
+    endDate?: string;
+    /** 状态筛选 */
+    status?: 'success' | 'failed' | 'all';
+    /** 排序方向 */
+    order?: 'desc' | 'asc';
+}
+
+/**
+ * 日志分页响应
+ */
+export interface LogPageResponse {
+    /** 当前页码 */
+    page: number;
+    /** 每页条数 */
+    pageSize: number;
+    /** 总条数 */
+    total: number;
+    /** 总页数 */
+    totalPages: number;
+    /** 日志列表 */
+    logs: CheckinLog[];
+}
+
+/**
+ * 日志统计按日期聚合
+ */
+export interface DailyStats {
+    /** 日期 YYYY-MM-DD */
+    date: string;
+    /** 签到次数 */
+    checkinCount: number;
+    /** 获得总积分 */
+    totalPoints: number;
+    /** 签到人数 */
+    userCount: number;
+}
+
+/**
+ * 日志统计按用户聚合
+ */
+export interface UserStats {
+    /** 用户QQ号 */
+    userId: string;
+    /** 用户昵称 */
+    nickname: string;
+    /** 签到次数 */
+    checkinCount: number;
+    /** 获得总积分 */
+    totalPoints: number;
+    /** 最后签到时间 */
+    lastCheckinTime: number;
+}
+
+/**
+ * 日志统计按群聚合
+ */
+export interface GroupStats {
+    /** 群号 */
+    groupId: string;
+    /** 群名称 */
+    groupName: string;
+    /** 签到次数 */
+    checkinCount: number;
+    /** 签到人数 */
+    userCount: number;
+    /** 获得总积分 */
+    totalPoints: number;
+}
+
+/**
+ * 日志统计时间范围
+ */
+export type StatsTimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
+
+/**
+ * 日志统计响应
+ */
+export interface LogStatsResponse {
+    /** 总签到次数 */
+    totalCheckins: number;
+    /** 总获得积分 */
+    totalPoints: number;
+    /** 参与用户数 */
+    totalUsers: number;
+    /** 参与群组数 */
+    totalGroups: number;
+    /** 日均签到 */
+    dailyAverage: number;
+    /** 日志总数 */
+    totalLogs: number;
+    /** 按日期统计 */
+    dailyStats: DailyStats[];
+    /** 按用户TOP */
+    topUsers: UserStats[];
+    /** 按群组TOP */
+    topGroups: GroupStats[];
+}
+
+/**
+ * 群日志配置
+ */
+export interface GroupLogConfig {
+    /** 群号 */
+    groupId: string;
+    /** 是否启用日志记录 */
+    enabled: boolean;
+    /** 是否启用统计 */
+    enableStats: boolean;
+    /** 日志保留天数（0 = 永久） */
+    retentionDays: number;
+}
