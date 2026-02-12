@@ -44,11 +44,21 @@ function getTodayStr(): string {
         // 返回昨天的日期
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        return yesterday.toISOString().split('T')[0];
+        return formatDateToString(yesterday);
     }
     
-    // 返回今天的日期
-    return now.toISOString().split('T')[0];
+    // 返回今天的日期（使用本地时区）
+    return formatDateToString(now);
+}
+
+/**
+ * 将 Date 对象格式化为 YYYY-MM-DD 字符串（本地时区）
+ */
+function formatDateToString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**

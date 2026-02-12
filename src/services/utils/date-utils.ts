@@ -3,24 +3,34 @@
  */
 
 /**
- * 获取今天的日期字符串 YYYY-MM-DD（基于配置的刷新时间）
+ * 获取今天的日期字符串 YYYY-MM-DD（基于刷新时间0点）
  */
 export function getTodayStr(): string {
     const now = new Date();
     
-    // 创建刷新时间点（今天）
+    // 创建刷新时间点（今天0点）
     const refreshTime = new Date(now);
     refreshTime.setHours(0, 0, 0, 0);
     
     // 如果当前时间已经过了刷新时间，使用今天的日期
     // 否则使用昨天的日期
     if (now >= refreshTime) {
-        return now.toISOString().split('T')[0];
+        return formatDateToString(now);
     } else {
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        return yesterday.toISOString().split('T')[0];
+        return formatDateToString(yesterday);
     }
+}
+
+/**
+ * 将 Date 对象格式化为 YYYY-MM-DD 字符串（本地时区）
+ */
+function formatDateToString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**
