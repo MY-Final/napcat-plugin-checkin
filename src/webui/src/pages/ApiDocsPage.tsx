@@ -1466,6 +1466,7 @@ function getSectionEndpoints(sectionId: string): ApiEndpoint[] {
 
 export default function ApiDocsPage() {
   const [activeSection, setActiveSection] = useState('quickstart')
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
   const sections = [
     { key: '快速开始', id: 'quickstart', icon: IconTerminal },
@@ -1524,8 +1525,8 @@ export default function ApiDocsPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-140px)] flex">
-      <aside className="w-64 flex-shrink-0 bg-white dark:bg-[#1a1b1d] border-r border-gray-200 dark:border-gray-800 overflow-y-auto">
+    <div className="min-h-screen grid grid-cols-[260px_1fr] gap-6">
+      <aside className="w-64 sticky top-0 h-screen overflow-y-auto bg-white dark:bg-[#1a1b1d] border-r border-gray-200 dark:border-gray-800">
         <div className="p-4">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white">
@@ -1539,43 +1540,67 @@ export default function ApiDocsPage() {
 
           <nav className="space-y-1">
             {sections.map(section => (
-              <button
-                key={section.key}
-                onClick={() => setActiveSection(section.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeSection === section.id
-                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <section.icon size={16} />
-                {section.key}
-              </button>
-            ))}
-
-            {activeSection !== 'quickstart' && getEndpointsForNav(activeSection).map(endpoint => (
-              <button
-                key={endpoint.id}
-                onClick={() => setActiveSection(endpoint.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ml-6 ${
-                  activeSection === endpoint.id
-                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <span className={`text-xs ${
-                  endpoint.method === 'GET' ? 'text-blue-500' : 'text-orange-500'
-                }`}>
-                  {endpoint.method}
-                </span>
-                <span className="truncate">{endpoint.path}</span>
-              </button>
+              <div key={section.key}>
+                <button
+                  onClick={() => {
+                    if (section.id === 'quickstart') {
+                      setActiveSection('quickstart')
+                      setExpandedSection(null)
+                    } else {
+                      setExpandedSection(expandedSection === section.id ? null : section.id)
+                    }
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    activeSection === section.id
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <section.icon size={16} />
+                  {section.key}
+                  {section.id !== 'quickstart' && (
+                    <svg 
+                      className={`w-4 h-4 ml-auto transition-transform ${expandedSection === section.id ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
+                
+                {section.id !== 'quickstart' && expandedSection === section.id && (
+                  <div className="ml-3 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+                    {getEndpointsForNav(section.id).map(endpoint => (
+                      <button
+                        key={endpoint.id}
+                        onClick={() => setActiveSection(endpoint.id)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${
+                          activeSection === endpoint.id
+                            ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <span className={`px-1.5 py-0.5 rounded ${
+                          endpoint.method === 'GET' 
+                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
+                            : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                        }`}>
+                          {endpoint.method}
+                        </span>
+                        <span className="truncate">{endpoint.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#0f0f10]">
+      <main className="overflow-y-auto bg-gray-50 dark:bg-[#0f0f10] p-6">
         <div className="max-w-4xl mx-auto p-8">
           {activeSection === 'quickstart' ? (
             <>
