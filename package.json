@@ -1,7 +1,7 @@
 {
   "name": "napcat-plugin-checkin",
   "plugin": "签到插件",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "main": "index.mjs",
   "description": "NapCat 精美签到插件 - 支持连续签到加成、积分统计",
