@@ -1344,17 +1344,6 @@ const LEADERBOARD_TEMPLATE_VARIABLES = [
 
 function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  const handleCopyPath = async () => {
-    try {
-      await navigator.clipboard.writeText(endpoint.path)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch (err) {
-      console.error('Failed to copy:', err)
-    }
-  }
 
   return (
     <div className={`border rounded-xl overflow-hidden mb-4 ${endpoint.authRequired ? 'border-orange-200 dark:border-orange-800' : 'border-gray-200 dark:border-gray-800'}`}>
@@ -1377,18 +1366,18 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
               需鉴权
             </span>
           )}
-          </div>
-          <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+        </div>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-        {isExpanded && (
+      {isExpanded && (
         <div className="px-6 py-4 bg-gray-50 dark:bg-[#0f0f10] border-t border-gray-200 dark:border-gray-800">
           {endpoint.authRequired && (
             <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
