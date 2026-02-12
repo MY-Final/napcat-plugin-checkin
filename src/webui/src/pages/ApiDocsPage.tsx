@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconBook, IconTerminal } from '../components/icons'
+import { IconBook, IconTerminal, IconBook as IconBookSvg } from '../components/icons'
 
 interface ApiEndpoint {
   id: string
@@ -1429,22 +1429,39 @@ function ApiCard({ endpoint }: { endpoint: ApiEndpoint }) {
   )
 }
 
-function getSectionEndpoints(section: string): ApiEndpoint[] {
-  const sections: Record<string, ApiEndpoint[]> = {
-    '核心接口': API_ENDPOINTS.filter(e => ['status'].includes(e.id)),
-    '签到数据': API_ENDPOINTS.filter(e => ['today-stats', 'active-ranking', 'checkin-stats', 'groups', 'update-group-config', 'bulk-group-config'].includes(e.id)),
-    '用户数据': API_ENDPOINTS.filter(e => ['user-data', 'user-balance', 'all-users'].includes(e.id)),
-    '群签到数据': API_ENDPOINTS.filter(e => ['group-stats', 'all-groups-stats', 'group-ranking', 'group-checkin-ranking'].includes(e.id)),
-    '积分排行': API_ENDPOINTS.filter(e => ['global-ranking'].includes(e.id)),
-    '积分管理': API_ENDPOINTS.filter(e => ['get-user-points', 'update-user-points', 'get-points-history', 'reset-user-points'].includes(e.id)),
-    '排行榜数据': API_ENDPOINTS.filter(e => ['leaderboard', 'cleanup'].includes(e.id)),
-    '签到日志': API_ENDPOINTS.filter(e => ['logs', 'logs-stats', 'logs-trend', 'logs-user', 'logs-group', 'logs-detail', 'logs-user-count', 'logs-group-count', 'logs-config', 'logs-config-detail', 'logs-config-update', 'logs-cleanup'].includes(e.id)),
-    'v1积分': API_ENDPOINTS.filter(e => ['v1-award', 'v1-consume', 'v1-balance-check', 'v1-points', 'v1-transactions', 'v1-levels-config', 'v1-user-level', 'v1-titles', 'v1-user-titles', 'v1-equip-title', 'v1-ranking-exp', 'v1-ranking-balance'].includes(e.id)),
-    '模板服务': API_ENDPOINTS.filter(e => ['template-preview'].includes(e.id)),
-    '模板管理': API_ENDPOINTS.filter(e => ['templates-list', 'templates-get', 'templates-by-type', 'templates-create', 'templates-update', 'templates-delete', 'templates-duplicate', 'templates-set-default', 'templates-config-get', 'templates-config-save', 'templates-init'].includes(e.id)),
-    '插件配置': API_ENDPOINTS.filter(e => ['get-config', 'post-config'].includes(e.id)),
+function getSectionEndpoints(sectionId: string): ApiEndpoint[] {
+  const sectionMap: Record<string, string[]> = {
+    'core': ['核心接口'],
+    'checkin-data': ['签到数据'],
+    'user-data': ['用户数据'],
+    'group-checkin': ['群签到数据'],
+    'ranking': ['积分排行'],
+    'points': ['积分管理'],
+    'leaderboard': ['排行榜数据'],
+    'logs': ['签到日志'],
+    'v1-points': ['v1积分'],
+    'template-service': ['模板服务'],
+    'template-manage': ['模板管理'],
+    'config': ['插件配置'],
   }
-  return sections[section] || []
+  const sectionNames = sectionMap[sectionId] || []
+  return sectionNames.flatMap(name => {
+    const sections: Record<string, ApiEndpoint[]> = {
+      '核心接口': API_ENDPOINTS.filter(e => ['status'].includes(e.id)),
+      '签到数据': API_ENDPOINTS.filter(e => ['today-stats', 'active-ranking', 'checkin-stats', 'groups', 'update-group-config', 'bulk-group-config'].includes(e.id)),
+      '用户数据': API_ENDPOINTS.filter(e => ['user-data', 'user-balance', 'all-users'].includes(e.id)),
+      '群签到数据': API_ENDPOINTS.filter(e => ['group-stats', 'all-groups-stats', 'group-ranking', 'group-checkin-ranking'].includes(e.id)),
+      '积分排行': API_ENDPOINTS.filter(e => ['global-ranking'].includes(e.id)),
+      '积分管理': API_ENDPOINTS.filter(e => ['get-user-points', 'update-user-points', 'get-points-history', 'reset-user-points'].includes(e.id)),
+      '排行榜数据': API_ENDPOINTS.filter(e => ['leaderboard', 'cleanup'].includes(e.id)),
+      '签到日志': API_ENDPOINTS.filter(e => ['logs', 'logs-stats', 'logs-trend', 'logs-user', 'logs-group', 'logs-detail', 'logs-user-count', 'logs-group-count', 'logs-config', 'logs-config-detail', 'logs-config-update', 'logs-cleanup'].includes(e.id)),
+      'v1积分': API_ENDPOINTS.filter(e => ['v1-award', 'v1-consume', 'v1-balance-check', 'v1-points', 'v1-transactions', 'v1-levels-config', 'v1-user-level', 'v1-titles', 'v1-user-titles', 'v1-equip-title', 'v1-ranking-exp', 'v1-ranking-balance'].includes(e.id)),
+      '模板服务': API_ENDPOINTS.filter(e => ['template-preview'].includes(e.id)),
+      '模板管理': API_ENDPOINTS.filter(e => ['templates-list', 'templates-get', 'templates-by-type', 'templates-create', 'templates-update', 'templates-delete', 'templates-duplicate', 'templates-set-default', 'templates-config-get', 'templates-config-save', 'templates-init'].includes(e.id)),
+      '插件配置': API_ENDPOINTS.filter(e => ['get-config', 'post-config'].includes(e.id)),
+    }
+    return sections[name] || []
+  })
 }
 
 export default function ApiDocsPage() {
@@ -1482,23 +1499,28 @@ export default function ApiDocsPage() {
     '插件配置': 'config',
   }
 
-  const getEndpointsForNav = (sectionKey: string): ApiEndpoint[] => {
-    const sectionNames: Record<string, string[]> = {
-      '核心接口': ['核心接口'],
-      '签到数据': ['签到数据'],
-      '用户数据': ['用户数据'],
-      '群签到数据': ['群签到数据'],
-      '积分排行': ['积分排行'],
-      '积分管理': ['积分管理'],
-      '排行榜数据': ['排行榜数据'],
-      '签到日志': ['签到日志'],
-      'v1积分': ['v1积分'],
-      '模板服务': ['模板服务'],
-      '模板管理': ['模板管理'],
-      '插件配置': ['插件配置'],
-    }
-    const names = sectionNames[sectionKey] || []
-    return names.flatMap(name => getSectionEndpoints(name))
+  const sectionNames: Record<string, string> = {
+    'quickstart': '快速开始',
+    'core': '核心接口',
+    'checkin-data': '签到数据',
+    'user-data': '用户数据',
+    'group-checkin': '群签到数据',
+    'ranking': '积分排行',
+    'points': '积分管理',
+    'leaderboard': '排行榜数据',
+    'logs': '签到日志',
+    'v1-points': 'v1积分',
+    'template-service': '模板服务',
+    'template-manage': '模板管理',
+    'config': '插件配置',
+  }
+
+  const isSectionId = (id: string): boolean => {
+    return id in sectionNames && id !== 'quickstart'
+  }
+
+  const getEndpointsForNav = (sectionId: string): ApiEndpoint[] => {
+    return getSectionEndpoints(sectionId)
   }
 
   return (
@@ -1519,9 +1541,9 @@ export default function ApiDocsPage() {
             {sections.map(section => (
               <button
                 key={section.key}
-                onClick={() => setActiveSection(sectionIdMap[section.key])}
+                onClick={() => setActiveSection(section.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeSection === sectionIdMap[section.key]
+                  activeSection === section.id
                     ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
@@ -1531,7 +1553,7 @@ export default function ApiDocsPage() {
               </button>
             ))}
 
-            {activeSection !== 'quickstart' && getEndpointsForNav(sections.find(s => sectionIdMap[s.key] === activeSection)?.key || '').map(endpoint => (
+            {activeSection !== 'quickstart' && getEndpointsForNav(activeSection).map(endpoint => (
               <button
                 key={endpoint.id}
                 onClick={() => setActiveSection(endpoint.id)}
@@ -1654,6 +1676,19 @@ const previewRes = await fetch('http://localhost:6099/plugin/napcat-plugin-check
                   ))}
                 </div>
               </div>
+            </>
+          ) : isSectionId(activeSection) ? (
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <IconBookSvg className="text-brand-500" size={24} />
+                  {sectionNames[activeSection]}
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">接口列表</p>
+              </div>
+              {getEndpointsForNav(activeSection).map((endpoint) => (
+                <ApiCard key={endpoint.id} endpoint={endpoint} />
+              ))}
             </>
           ) : (
             <>
