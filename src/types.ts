@@ -64,6 +64,203 @@ export interface CheckinRefreshTimeConfig {
 }
 
 /**
+ * 等级配置
+ */
+export interface LevelConfig {
+    /** 等级数字 */
+    level: number;
+    /** 等级名称 */
+    name: string;
+    /** 升级所需最小经验值 */
+    minExp: number;
+    /** 等级图标 */
+    icon: string;
+    /** 等级颜色 */
+    color: string;
+    /** 等级特权 */
+    privileges: {
+        /** 签到加成点数 */
+        signinBonus: number;
+    };
+}
+
+/**
+ * 称号定义（配置用）
+ */
+export interface TitleDefinition {
+    /** 称号唯一ID */
+    id: string;
+    /** 称号名称 */
+    name: string;
+    /** 称号描述 */
+    description: string;
+    /** 称号图标 */
+    icon?: string;
+    /** 称号颜色 */
+    color?: string;
+    /** 获取类型 */
+    acquireType: 'level' | 'exp' | 'days' | 'activity' | 'special' | 'purchase';
+    /** 获取条件值 */
+    acquireCondition: number | string;
+    /** 有效期（0 = 永久） */
+    expireDays: number;
+}
+
+/**
+ * 奖励积分参数
+ */
+export interface AwardPointsParams {
+    /** 用户ID */
+    userId: string;
+    /** 群ID */
+    groupId: string;
+    /** 基础奖励数额 */
+    amount: number;
+    /** 来源类型 */
+    source: 'signin' | 'consecutive' | 'activity' | 'admin';
+    /** 操作描述 */
+    description: string;
+    /** 是否应用等级加成 */
+    applyLevelBonus?: boolean;
+    /** 倍率（活动双倍等） */
+    multiplier?: number;
+    /** 幂等键（防止重复） */
+    idempotencyKey?: string;
+    /** 调用方插件名称 */
+    relatedPlugin?: string;
+}
+
+/**
+ * 消费积分参数
+ */
+export interface ConsumePointsParams {
+    /** 用户ID */
+    userId: string;
+    /** 群ID */
+    groupId: string;
+    /** 消费数额（正数） */
+    amount: number;
+    /** 操作描述 */
+    description: string;
+    /** 关联订单ID */
+    orderId?: string;
+    /** 幂等键（必填，防止重复扣款） */
+    idempotencyKey: string;
+    /** 调用方插件名称 */
+    relatedPlugin?: string;
+    /** 操作者ID */
+    operatorId?: string;
+}
+
+/**
+ * 奖励积分结果
+ */
+export interface AwardResult {
+    /** 是否成功 */
+    success: boolean;
+    /** 奖励明细 */
+    awarded: {
+        base: number;
+        levelBonus: number;
+        total: number;
+    };
+    /** 新的经验值 */
+    newExp: number;
+    /** 新的余额 */
+    newBalance: number;
+    /** 新的等级 */
+    newLevel: number;
+    /** 是否升级 */
+    levelUp: boolean;
+    /** 新等级名称 */
+    newLevelName?: string;
+    /** 交易记录ID */
+    transactionId: string;
+    /** 错误信息 */
+    error?: string;
+}
+
+/**
+ * 消费积分结果
+ */
+export interface ConsumeResult {
+    /** 是否成功 */
+    success: boolean;
+    /** 消费数额 */
+    consumed: number;
+    /** 新的余额 */
+    newBalance: number;
+    /** 不变的经验值 */
+    expUnchanged: number;
+    /** 交易记录ID */
+    transactionId: string;
+    /** 错误信息 */
+    error?: string;
+}
+
+/**
+ * 余额检查结果
+ */
+export interface CheckBalanceResult {
+    /** 当前余额 */
+    balance: number;
+    /** 是否充足 */
+    sufficient: boolean;
+    /** 所需数额 */
+    required?: number;
+    /** 差额（不足时） */
+    shortfall?: number;
+}
+
+/**
+ * 用户积分信息
+ */
+export interface UserPointsInfo {
+    userId: string;
+    nickname: string;
+    totalExp: number;
+    balance: number;
+    level: number;
+    levelName: string;
+    levelIcon: string;
+    equippedTitle?: string;
+}
+
+/**
+ * 等级信息
+ */
+export interface LevelInfo {
+    level: number;
+    name: string;
+    icon: string;
+    color: string;
+    minExp: number;
+    nextLevelExp?: number;
+    privileges: {
+        signinBonus: number;
+    };
+}
+
+/**
+ * 升级信息
+ */
+export interface LevelUpInfo {
+    /** 是否升级 */
+    levelUp: true;
+    /** 旧等级 */
+    oldLevel: number;
+    /** 新等级 */
+    newLevel: number;
+    /** 新等级名称 */
+    newLevelName: string;
+    /** 升级奖励（可选） */
+    rewards?: {
+        balance?: number;
+        title?: string;
+    };
+}
+
+/**
  * 插件主配置接口
  */
 export interface PluginConfig {
@@ -99,6 +296,11 @@ export interface PluginConfig {
     leaderboardCommands: string;
     /** 排行榜显示数量 */
     leaderboardTopCount: number;
+    /** 
+     * 群称号配置
+     * key: 群ID, value: 该群的称号列表
+     */
+    groupTitles?: Record<string, TitleDefinition[]>;
 }
 
 /**
@@ -156,29 +358,68 @@ export interface UserCheckinData {
 }
 
 /**
- * 群内用户签到数据
+ * 群内用户签到数据（双轨制积分系统）
+ * 
+ * 双轨制说明：
+ * - totalExp: 累计经验值（只增不减，用于排名和等级）
+ * - balance: 可用余额（可增可减，用于消费）
  */
 export interface GroupUserCheckinData {
     /** 用户QQ号 */
     userId: string;
     /** 用户昵称 */
     nickname: string;
+    
+    // ========== 双轨制积分（核心字段）==========
+    /** 
+     * 累计经验值（Total Experience Points）
+     * 特性：只增不减，用于计算排名和等级
+     * 类比：江湖地位、历史贡献
+     */
+    totalExp: number;
+    
+    /** 
+     * 可用余额（Balance / Spendable Points）
+     * 特性：可增可减，用于消费和兑换
+     * 类比：钱包余额、活期存款
+     */
+    balance: number;
+    
+    // ========== 等级与称号系统 ==========
+    /** 当前等级（基于 totalExp 计算） */
+    level: number;
+    /** 等级名称 */
+    levelName: string;
+    /** 等级图标 */
+    levelIcon: string;
+    /** 当前佩戴的称号ID */
+    equippedTitleId?: string;
+    /** 拥有的称号列表 */
+    titles: UserTitle[];
+    
+    // ========== 统计数据 ==========
     /** 群内累计签到天数 */
     totalCheckinDays: number;
     /** 群内连续签到天数 */
     consecutiveDays: number;
-    /** 群内总积分 */
-    totalPoints: number;
     /** 群内最后签到日期 YYYY-MM-DD */
     lastCheckinDate: string;
     /** 群内签到历史记录 */
     checkinHistory: CheckinRecord[];
-    /** 积分变更历史（用于兑换奖励等操作记录） */
-    pointsHistory?: PointsChangeRecord[];
+    
+    // ========== 交易流水 ==========
+    /** 详细的资金流水记录 */
+    transactionLog: TransactionRecord[];
+    
+    // ========== 数据版本（用于迁移）==========
+    /** 数据格式版本号（当前=2） */
+    dataVersion: number;
+    /** 迁移时间（首次升级时记录） */
+    migratedAt?: string;
 }
 
 /**
- * 积分变更记录
+ * 积分变更记录（旧版，向后兼容）
  * 用于记录积分的增加/减少操作（如兑换奖励）
  */
 export interface PointsChangeRecord {
@@ -198,6 +439,67 @@ export interface PointsChangeRecord {
     description: string;
     /** 操作者ID（管理员操作时记录） */
     operatorId?: string;
+}
+
+/**
+ * 用户称号实例
+ */
+export interface UserTitle {
+    /** 称号ID */
+    titleId: string;
+    /** 获得时间 YYYY-MM-DD */
+    acquiredAt: string;
+    /** 过期时间（undefined = 永久） */
+    expiresAt?: string;
+    /** 是否正在佩戴 */
+    isEquipped: boolean;
+}
+
+/**
+ * 交易流水记录（完善版）
+ */
+export interface TransactionRecord {
+    /** 唯一ID */
+    id: string;
+    /** Unix时间戳（毫秒） */
+    timestamp: number;
+    /** 日期 YYYY-MM-DD */
+    date: string;
+    /** 时间 HH:mm:ss */
+    time: string;
+    
+    /** 交易类型 */
+    type: 'signin' | 'consecutive' | 'level_bonus' | 'activity' | 'award' | 
+          'consume' | 'exchange' | 'redpacket' | 'receive' | 'transfer' | 'admin' | 'rollback';
+    
+    /** 经验值变动（通常 >= 0） */
+    expChange: number;
+    /** 余额变动（可正可负） */
+    balanceChange: number;
+    /** 变动前经验值 */
+    expBefore: number;
+    /** 变动后经验值 */
+    expAfter: number;
+    /** 变动前余额 */
+    balanceBefore: number;
+    /** 变动后余额 */
+    balanceAfter: number;
+    
+    /** 操作描述 */
+    description: string;
+    /** 扩展详情 */
+    details?: Record<string, unknown>;
+    
+    /** 操作者ID */
+    operatorId?: string;
+    /** 操作者昵称 */
+    operatorName?: string;
+    /** 关联订单ID */
+    relatedOrderId?: string;
+    /** 调用方插件名称 */
+    relatedPlugin?: string;
+    /** 幂等键 */
+    idempotencyKey?: string;
 }
 
 /**

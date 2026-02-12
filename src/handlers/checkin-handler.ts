@@ -6,6 +6,7 @@
 import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
+import type { UserCheckinData, GroupUserCheckinData } from '../types';
 import { 
     performCheckin, 
     getUserCheckinData, 
@@ -121,9 +122,9 @@ export async function handleCheckinCommand(
         }
 
         // 生成签到卡片
-        // 如果在群内签到，显示群内累计积分；否则显示全局积分
+        // 如果在群内签到，显示群内累计经验值；否则显示全局积分
         const displayTotalPoints = groupId && result.groupUserData
-            ? result.groupUserData.totalPoints
+            ? result.groupUserData.totalExp
             : result.userData.totalPoints;
 
         // 获取当前日期信息
@@ -233,11 +234,16 @@ export async function handleCheckinQuery(
                 ? getGroupTodayCheckinCount(String(groupId))
                 : getTodayCheckinCount();
                 
+            // 根据数据类型显示不同的积分字段
+            const displayPoints = isGroupData 
+                ? (displayData as GroupUserCheckinData).totalExp 
+                : (displayData as UserCheckinData).totalPoints;
+            
             const text = [
                 `📊 ${displayData.nickname} 的签到数据`,
                 isGroupData ? `👥 当前群内统计` : `🌍 全服统计`,
                 ``,
-                `💰 ${isGroupData ? '群内' : '累计'}积分: ${displayData.totalPoints}`,
+                `💰 ${isGroupData ? '群内' : '累计'}积分: ${displayPoints}`,
                 `📅 ${isGroupData ? '群内' : '累计'}签到: ${displayData.totalCheckinDays} 天`,
                 `🔥 连续签到: ${displayData.consecutiveDays} 天`,
                 ``,
@@ -265,15 +271,15 @@ export async function handleCheckinQuery(
             }
             
             const sortedUsers = Array.from(groupUsers.values())
-                .sort((a, b) => b.totalPoints - a.totalPoints)
+                .sort((a, b) => b.totalExp - a.totalExp)
                 .slice(0, 10);
-            
+
             const text = [
                 `🏆 群内积分排行 TOP10`,
                 ``,
                 ...sortedUsers.map((user, index) => {
                     const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
-                    return `${medal} ${user.nickname} - ${user.totalPoints}分 (${user.totalCheckinDays}天)`;
+                    return `${medal} ${user.nickname} - ${user.totalExp}分 (${user.totalCheckinDays}天)`;
                 }),
                 ``,
                 `💡 使用 "${pluginState.config.commandPrefix}我的积分" 查看个人详情`,

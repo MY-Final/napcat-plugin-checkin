@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import { pluginState } from '../core/state';
 import { calculatePoints } from './points-calculator';
+import { PointsCoreService } from './points/points-core.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -92,33 +93,69 @@ function getWeekNumber(date: Date): number {
 }
 
 /**
- * 检查今天是否还可以签到
+ * 检查今天是否还可以签到（群内独立）
+ * 
+ * 注意：每个群独立计算签到次数，不再限制全局签到
  */
 function canCheckinToday(userId: string, groupId: string | undefined, todayStr: string): { canCheckin: boolean; checkedInCount: number } {
-    // 加载全局数据
-    const globalUsers = loadGlobalUsersData();
-    const globalUserData = globalUsers.get(userId);
-    
-    // 如果是 daily 周期，按日期判断
-    if (pluginState.config.checkinRefreshTime.cycleType === 'daily') {
-        const globalCheckinCount = globalUserData?.lastCheckinDate === todayStr ? 1 : 0;
+    // 如果没有指定群，检查全局签到（向后兼容）
+    if (!groupId) {
+        const globalUsers = loadGlobalUsersData();
+        const globalUserData = globalUsers.get(userId);
+        
+        if (pluginState.config.checkinRefreshTime.cycleType === 'daily') {
+            const globalCheckinCount = globalUserData?.lastCheckinDate === todayStr ? 1 : 0;
+            const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
+            
+            return {
+                canCheckin: globalCheckinCount < maxCount,
+                checkedInCount: globalCheckinCount
+            };
+        }
+        
+        // weekly/monthly 周期
+        const cycleId = getCycleIdentifier();
+        const checkinHistory = globalUserData?.checkinHistory || [];
+        const cycleCheckinCount = checkinHistory.filter(record => {
+            const recordDate = new Date(record.date);
+            return getCycleIdentifierForDate(recordDate) === cycleId;
+        }).length;
+        
         const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
         
         return {
-            canCheckin: globalCheckinCount < maxCount,
-            checkedInCount: globalCheckinCount
+            canCheckin: cycleCheckinCount < maxCount,
+            checkedInCount: cycleCheckinCount
         };
     }
     
-    // weekly/monthly 周期需要统计本周期内签到次数
+    // 群内独立签到：检查该群今天/本周/本月已签到次数
+    const groupUsers = loadGroupUsersData(groupId);
+    const groupUserData = groupUsers.get(userId);
+    const cycleType = pluginState.config.checkinRefreshTime.cycleType || 'daily';
+    const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
+    
+    if (!groupUserData) {
+        // 用户在该群没有数据，可以签到
+        return { canCheckin: true, checkedInCount: 0 };
+    }
+    
+    if (cycleType === 'daily') {
+        // 检查今天在该群签到次数
+        const todayCheckinCount = groupUserData.lastCheckinDate === todayStr ? 1 : 0;
+        return {
+            canCheckin: todayCheckinCount < maxCount,
+            checkedInCount: todayCheckinCount
+        };
+    }
+    
+    // weekly/monthly 周期
     const cycleId = getCycleIdentifier();
-    const checkinHistory = globalUserData?.checkinHistory || [];
+    const checkinHistory = groupUserData.checkinHistory || [];
     const cycleCheckinCount = checkinHistory.filter(record => {
         const recordDate = new Date(record.date);
         return getCycleIdentifierForDate(recordDate) === cycleId;
     }).length;
-    
-    const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
     
     return {
         canCheckin: cycleCheckinCount < maxCount,
@@ -188,7 +225,7 @@ function saveGlobalUsersData(): void {
 /**
  * 加载群内用户数据
  */
-function loadGroupUsersData(groupId: string): Map<string, GroupUserCheckinData> {
+export function loadGroupUsersData(groupId: string): Map<string, GroupUserCheckinData> {
     if (!groupUsersCache.has(groupId)) {
         const fileName = getGroupDataFile(groupId);
         const groupData = pluginState.loadDataFile<{
@@ -205,7 +242,7 @@ function loadGroupUsersData(groupId: string): Map<string, GroupUserCheckinData> 
  * @param groupId 群号
  * @param groupName 群名称（可选，首次保存时传入）
  */
-function saveGroupUsersData(groupId: string, groupName?: string): void {
+export function saveGroupUsersData(groupId: string, groupName?: string): void {
     const users = groupUsersCache.get(groupId);
     if (!users) return;
     
@@ -314,26 +351,7 @@ export async function performCheckin(
             };
         }
         
-        // 2. 检查群内是否已经签到（如果指定了群）
-        if (groupId) {
-            const groupUsers = loadGroupUsersData(groupId);
-            const groupUserData = groupUsers.get(userId);
-            
-            if (groupUserData && groupUserData.lastCheckinDate === today) {
-                return {
-                    success: false,
-                    isFirstTime: false,
-                    userData: loadGlobalUsersData().get(userId)!,
-                    earnedPoints: 0,
-                    todayRank: 0,
-                    checkinTime: currentTime,
-                    consecutiveDays: groupUserData.consecutiveDays,
-                    error: '今天已经在这个群签到过了，明天再来吧~',
-                };
-            }
-        }
-        
-        // 3. 加载全局数据（全服排行用）
+        // 2. 加载全局数据（全服排行用）
         const globalUsers = loadGlobalUsersData();
         let globalUserData = globalUsers.get(userId);
         
@@ -371,11 +389,10 @@ export async function performCheckin(
             }
         }
         
-        // 5. 计算积分（群内签到始终给分，但全局积分今天已签到过则不再给）
+        // 5. 计算积分
         const config = pluginState.config.checkinPoints;
         const pointsResult = calculatePoints(config, globalConsecutiveDays);
-        const groupPoints = pointsResult.totalPoints; // 群内积分始终给
-        const globalPoints = hasCheckedInToday ? 0 : pointsResult.totalPoints; // 全局积分今天已签到则不给
+        const earnedPoints = pointsResult.totalPoints;
         
         // 6. 更新全局用户数据
         const isFirstTime = !globalUserData;
@@ -399,10 +416,12 @@ export async function performCheckin(
         const globalDailyStats = loadGroupDailyStats('global');
         const globalRank = globalDailyStats.userIds.length + 1;
         
-        // 只有今天没签到过才增加天数、积分和活跃天数
+        // 全局积分：每次群内签到都增加（记录总获得积分）
+        globalUserData.totalPoints += earnedPoints;
+        
+        // 只有今天没签到过才增加天数、活跃天数和历史记录
         if (!hasCheckedInToday) {
             globalUserData.totalCheckinDays += 1;
-            globalUserData.totalPoints += globalPoints;
             
             // 更新活跃天数（每天首次使用机器人，不管在哪个群）
             globalUserData.activeDays += 1;
@@ -411,7 +430,7 @@ export async function performCheckin(
             // 添加到全局历史记录
             globalUserData.checkinHistory.push({
                 date: today,
-                points: globalPoints,
+                points: earnedPoints,
                 time: currentTime,
                 rank: globalRank,
                 groupId: groupId || undefined,
@@ -434,77 +453,112 @@ export async function performCheckin(
         globalUsers.set(userId, globalUserData);
         saveGlobalUsersData();
         
-        // 6. 如果指定了群，更新群内数据
+        // 6. 如果指定了群，使用新的双轨制积分系统奖励积分
         let groupRank = globalRank;
         let groupUserData: GroupUserCheckinData | undefined = undefined;
         if (groupId) {
-            const groupUsers = loadGroupUsersData(groupId);
-            groupUserData = groupUsers.get(userId);
+            // 先确保群内用户数据存在
+            const groupUsersMap = loadGroupUsersData(groupId);
+            groupUserData = groupUsersMap.get(userId);
             
-            // 计算群内连续签到
-            let groupConsecutiveDays = 1;
-            if (groupUserData && groupUserData.lastCheckinDate) {
-                const config = pluginState.config.checkinRefreshTime;
-                
-                // 计算上一个周期的日期（考虑刷新时间）
-                const now = new Date();
-                const yesterday = new Date(now);
-                yesterday.setDate(yesterday.getDate() - 1);
-                
-                const currentRefreshTime = new Date(now);
-                currentRefreshTime.setHours(config.hour, config.minute, 0, 0);
-                
-                let previousCycleDate = yesterday;
-                if (now < currentRefreshTime) {
-                    previousCycleDate = new Date(yesterday);
-                    previousCycleDate.setDate(previousCycleDate.getDate() - 1);
-                }
-                
-                const previousCycleStr = previousCycleDate.toISOString().split('T')[0];
-                
-                if (groupUserData.lastCheckinDate === previousCycleStr) {
-                    groupConsecutiveDays = groupUserData.consecutiveDays + 1;
-                }
-            }
-            
+            // 如果用户不存在，创建初始数据
             if (!groupUserData) {
                 groupUserData = {
                     userId,
                     nickname,
+                    totalExp: 0,
+                    balance: 0,
+                    level: 1,
+                    levelName: '初来乍到',
+                    levelIcon: '🌱',
                     totalCheckinDays: 0,
                     consecutiveDays: 0,
-                    totalPoints: 0,
                     lastCheckinDate: '',
                     checkinHistory: [],
+                    transactionLog: [],
+                    titles: [],
+                    dataVersion: 2,
                 };
+                groupUsersMap.set(userId, groupUserData);
+                saveGroupUsersData(groupId, groupName);
             }
             
-            groupUserData.nickname = nickname;
-            groupUserData.totalCheckinDays += 1;
-            groupUserData.consecutiveDays = groupConsecutiveDays;
-            groupUserData.totalPoints += groupPoints; // 使用群内积分
-            groupUserData.lastCheckinDate = today;
+            // 使用 PointsCoreService 奖励积分（双轨制）
+            const awardResult = await PointsCoreService.awardPoints(
+                groupId,
+                userId,
+                {
+                    userId,
+                    groupId,
+                    amount: earnedPoints,
+                    source: 'signin',
+                    description: `每日签到奖励 (${today})`,
+                    applyLevelBonus: true,
+                    idempotencyKey: `signin-${groupId}-${userId}-${today}`,
+                }
+            );
+            
+            if (!awardResult.success) {
+                pluginState.logger.error(`签到积分奖励失败: ${awardResult.error}`);
+            } else {
+                // 重新加载更新后的用户数据
+                const updatedGroupUsers = loadGroupUsersData(groupId);
+                groupUserData = updatedGroupUsers.get(userId);
+            }
+            
+            // 更新群内连续签到天数
+            if (groupUserData) {
+                let groupConsecutiveDays = 1;
+                if (groupUserData.lastCheckinDate) {
+                    const refreshConfig = pluginState.config.checkinRefreshTime;
+                    const now = new Date();
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    
+                    const currentRefreshTime = new Date(now);
+                    currentRefreshTime.setHours(refreshConfig.hour, refreshConfig.minute, 0, 0);
+                    
+                    let previousCycleDate = yesterday;
+                    if (now < currentRefreshTime) {
+                        previousCycleDate = new Date(yesterday);
+                        previousCycleDate.setDate(previousCycleDate.getDate() - 1);
+                    }
+                    
+                    const previousCycleStr = previousCycleDate.toISOString().split('T')[0];
+                    
+                    if (groupUserData.lastCheckinDate === previousCycleStr) {
+                        groupConsecutiveDays = groupUserData.consecutiveDays + 1;
+                    }
+                }
+                
+                groupUserData.consecutiveDays = groupConsecutiveDays;
+                groupUserData.totalCheckinDays += 1;
+                groupUserData.lastCheckinDate = today;
+                
+                // 添加到签到历史
+                groupUserData.checkinHistory.push({
+                    date: today,
+                    points: earnedPoints,
+                    time: currentTime,
+                    rank: groupRank,
+                    groupId,
+                });
+                
+                // 限制历史记录长度
+                if (groupUserData.checkinHistory.length > 365) {
+                    groupUserData.checkinHistory = groupUserData.checkinHistory.slice(-365);
+                }
+                
+                // 保存更新后的群内数据
+                const groupUsers = loadGroupUsersData(groupId);
+                groupUsers.set(userId, groupUserData);
+                saveGroupUsersData(groupId, groupName);
+            }
             
             // 群内排名
             const groupDailyStats = loadGroupDailyStats(groupId);
             groupRank = groupDailyStats.userIds.length + 1;
             
-            groupUserData.checkinHistory.push({
-                date: today,
-                points: groupPoints, // 使用群内积分
-                time: currentTime,
-                rank: groupRank,
-                groupId,
-            });
-
-            // 限制历史记录长度
-            if (groupUserData.checkinHistory.length > 365) {
-                groupUserData.checkinHistory = groupUserData.checkinHistory.slice(-365);
-            }
-
-            groupUsers.set(userId, groupUserData);
-            saveGroupUsersData(groupId, groupName);
-
             // 更新群内每日统计
             groupDailyStats.totalCheckins += 1;
             groupDailyStats.userIds.push(userId);
@@ -515,8 +569,8 @@ export async function performCheckin(
             success: true,
             isFirstTime,
             userData: globalUserData,
-            groupUserData: groupUserData, // 返回群内数据（如果有）
-            earnedPoints: groupId ? groupPoints : globalPoints, // 群内签到返回群内积分，否则返回全局积分
+            groupUserData: groupUserData,
+            earnedPoints: earnedPoints,
             todayRank: groupRank,
             checkinTime: currentTime,
             consecutiveDays: globalConsecutiveDays,
@@ -589,12 +643,13 @@ export function getGroupAllUsersData(groupId: string): Map<string, GroupUserChec
  * 获取群用户积分详情
  * @param groupId 群号
  * @param userId 用户ID
- * @returns 用户积分数据
+ * @returns 用户积分数据（双轨制：totalExp/balance）
  */
 export function getGroupUserPoints(groupId: string, userId: string): {
     userId: string;
     nickname: string;
-    totalPoints: number;
+    totalExp: number;
+    balance: number;
     totalCheckinDays: number;
 } | null {
     const groupUsers = loadGroupUsersData(groupId);
@@ -604,20 +659,21 @@ export function getGroupUserPoints(groupId: string, userId: string): {
     return {
         userId: userData.userId,
         nickname: userData.nickname,
-        totalPoints: userData.totalPoints,
+        totalExp: userData.totalExp,
+        balance: userData.balance,
         totalCheckinDays: userData.totalCheckinDays,
     };
 }
 
 /**
- * 修改群用户积分（增加/减少）
+ * 修改群用户积分（增加/减少）- 双轨制兼容版
  * @param groupId 群号
  * @param userId 用户ID
  * @param points 变更积分（正数增加，负数减少）
  * @param description 操作说明
  * @param type 操作类型
  * @param operatorId 操作者ID（可选）
- * @returns 变更后的积分
+ * @returns 变更后的余额
  */
 export function updateGroupUserPoints(
     groupId: string,
@@ -635,35 +691,40 @@ export function updateGroupUserPoints(
             return { success: false, newBalance: 0, error: '用户不存在' };
         }
 
-        // 计算新余额
-        const newBalance = userData.totalPoints + points;
+        // 计算新余额（使用 balance 字段）
+        const newBalance = userData.balance + points;
         if (newBalance < 0) {
-            return { success: false, newBalance: userData.totalPoints, error: '积分不足' };
+            return { success: false, newBalance: userData.balance, error: '积分不足' };
         }
 
-        // 更新积分
-        userData.totalPoints = newBalance;
+        // 更新余额
+        userData.balance = newBalance;
 
-        // 记录变更历史
-        if (!userData.pointsHistory) {
-            userData.pointsHistory = [];
+        // 记录变更历史（使用 transactionLog）
+        if (!userData.transactionLog) {
+            userData.transactionLog = [];
         }
 
         const now = new Date();
-        userData.pointsHistory.push({
+        userData.transactionLog.unshift({
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             timestamp: now.getTime(),
             date: now.toISOString().split('T')[0],
             time: now.toTimeString().split(' ')[0],
-            points: points,
-            balance: newBalance,
-            type: type,
+            type: points > 0 ? 'admin' : 'consume',
+            expChange: points > 0 ? points : 0,
+            balanceChange: points,
+            expBefore: userData.totalExp - (points > 0 ? points : 0),
+            expAfter: userData.totalExp,
+            balanceBefore: newBalance - points,
+            balanceAfter: newBalance,
             description: description,
             operatorId: operatorId,
         });
 
         // 限制历史记录长度（保留最近100条）
-        if (userData.pointsHistory.length > 100) {
-            userData.pointsHistory = userData.pointsHistory.slice(-100);
+        if (userData.transactionLog.length > 100) {
+            userData.transactionLog = userData.transactionLog.slice(0, 100);
         }
 
         // 保存数据
@@ -700,15 +761,27 @@ export function getGroupUserPointsHistory(
     const groupUsers = loadGroupUsersData(groupId);
     const userData = groupUsers.get(userId);
 
-    if (!userData || !userData.pointsHistory) {
+    if (!userData || !userData.transactionLog) {
         return [];
     }
 
-    return userData.pointsHistory.slice(-limit).reverse();
+    // 将 transactionLog 转换为旧格式返回（向后兼容）
+    return userData.transactionLog
+        .slice(0, limit)
+        .map(record => ({
+            timestamp: record.timestamp,
+            date: record.date,
+            time: record.time,
+            points: record.balanceChange,
+            balance: record.balanceAfter,
+            type: record.type,
+            description: record.description,
+            operatorId: record.operatorId,
+        }));
 }
 
 /**
- * 重置群用户积分（谨慎使用）
+ * 重置群用户积分（谨慎使用）- 双轨制兼容版
  * @param groupId 群号
  * @param userId 用户ID
  * @param description 操作说明
@@ -729,25 +802,30 @@ export function resetGroupUserPoints(
             return { success: false, error: '用户不存在' };
         }
 
-        const oldPoints = userData.totalPoints;
-        const pointsChange = -oldPoints;
+        const oldBalance = userData.balance;
+        const balanceChange = -oldBalance;
 
-        // 重置积分
-        userData.totalPoints = 0;
+        // 重置余额（totalExp 不受影响）
+        userData.balance = 0;
 
         // 记录变更历史
-        if (!userData.pointsHistory) {
-            userData.pointsHistory = [];
+        if (!userData.transactionLog) {
+            userData.transactionLog = [];
         }
 
         const now = new Date();
-        userData.pointsHistory.push({
+        userData.transactionLog.unshift({
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             timestamp: now.getTime(),
             date: now.toISOString().split('T')[0],
             time: now.toTimeString().split(' ')[0],
-            points: pointsChange,
-            balance: 0,
             type: 'admin',
+            expChange: 0,
+            balanceChange: balanceChange,
+            expBefore: userData.totalExp,
+            expAfter: userData.totalExp,
+            balanceBefore: oldBalance,
+            balanceAfter: 0,
             description: description,
             operatorId: operatorId,
         });
@@ -857,7 +935,8 @@ export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
     const users: GroupUserInfo[] = [];
     
     for (const [userId, userData] of groupUsers) {
-        totalPoints += userData.totalPoints;
+        // 使用 totalExp 作为统计积分（累计经验值）
+        totalPoints += userData.totalExp;
         
         if (userData.lastCheckinDate === today) {
             todayCheckins++;
@@ -866,7 +945,7 @@ export function getGroupCheckinStats(groupId: string): GroupCheckinStats {
         users.push({
             userId,
             nickname: userData.nickname,
-            groupPoints: userData.totalPoints,
+            groupPoints: userData.totalExp,
             groupCheckinDays: userData.totalCheckinDays,
             lastCheckinDate: userData.lastCheckinDate,
         });

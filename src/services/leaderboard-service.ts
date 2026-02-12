@@ -30,14 +30,14 @@ export function getLeaderboard(
         userId: string;
         nickname: string;
         periodPoints: number;
-        totalPoints: number;
+        totalExp: number;
         checkinDays: number;
     }> = new Map();
-    
+
     for (const [userId, userData] of groupUsers) {
         let periodPoints = 0;
         let checkinDays = 0;
-        
+
         // 遍历签到历史，统计周期内的积分
         for (const record of userData.checkinHistory) {
             const recordDate = new Date(record.date);
@@ -46,13 +46,13 @@ export function getLeaderboard(
                 checkinDays++;
             }
         }
-        
+
         if (periodPoints > 0 || type === 'all') {
             userStats.set(userId, {
                 userId,
                 nickname: userData.nickname,
-                periodPoints: type === 'all' ? userData.totalPoints : periodPoints,
-                totalPoints: userData.totalPoints,
+                periodPoints: type === 'all' ? userData.totalExp : periodPoints,
+                totalExp: userData.totalExp,
                 checkinDays: type === 'all' ? userData.totalCheckinDays : checkinDays,
             });
         }
@@ -71,11 +71,11 @@ export function getLeaderboard(
         nickname: user.nickname,
         avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${user.userId}&s=100`,
         periodPoints: user.periodPoints,
-        totalPoints: user.totalPoints,
+        totalPoints: user.totalExp,
         checkinDays: user.checkinDays,
         rank: index + 1,
     }));
-    
+
     // 查找当前用户排名
     let myRank: LeaderboardUser | undefined;
     if (currentUserId) {
@@ -87,7 +87,7 @@ export function getLeaderboard(
                 nickname: myData.nickname,
                 avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${myData.userId}&s=100`,
                 periodPoints: myData.periodPoints,
-                totalPoints: myData.totalPoints,
+                totalPoints: myData.totalExp,
                 checkinDays: myData.checkinDays,
                 rank: myIndex + 1,
             };
