@@ -24,6 +24,7 @@ import { getRandomQuote } from '../utils/checkin-messages';
 import { sendReply } from './message-handler';
 import type { CheckinCardData } from '../types';
 import { createCheckinLog, isGroupLogEnabled } from '../services/log-service';
+import { getTodayStr } from '../services/utils/date-utils';
 
 // CD 冷却管理
 const cooldownMap = new Map<string, number>();
@@ -107,14 +108,28 @@ export async function handleCheckinCommand(
                 // 已经签到，显示今日信息
                 const userData = getUserCheckinData(userId);
                 if (userData) {
-                    const todayRecord = userData.checkinHistory[userData.checkinHistory.length - 1];
-                    await sendReply(ctx, event, 
-                        `今天已经签到过了哦~\n` +
-                        `📅 签到时间: ${todayRecord.time}\n` +
-                        `💎 获得积分: ${todayRecord.points}\n` +
-                        `🏆 今日排名: #${todayRecord.rank}\n` +
-                        `🔥 连续签到: ${userData.consecutiveDays}天`
-                    );
+                    // 找到今天的签到记录
+                    const today = getTodayStr();
+                    const todayRecord = userData.checkinHistory.find(r => r.date === today);
+                    if (todayRecord) {
+                        await sendReply(ctx, event, 
+                            `今天已经签到过了哦~\n` +
+                            `📅 签到时间: ${todayRecord.time}\n` +
+                            `💎 获得积分: ${todayRecord.points}\n` +
+                            `🏆 今日排名: #${todayRecord.rank}\n` +
+                            `🔥 连续签到: ${userData.consecutiveDays}天`
+                        );
+                    } else {
+                        // 没有找到今天记录，显示最后一次签到
+                        const lastRecord = userData.checkinHistory[userData.checkinHistory.length - 1];
+                        await sendReply(ctx, event, 
+                            `今天已经签到过了哦~\n` +
+                            `📅 签到时间: ${lastRecord?.time || '未知'}\n` +
+                            `💎 获得积分: ${lastRecord?.points || 0}\n` +
+                            `🏆 排名: #${lastRecord?.rank || 0}\n` +
+                            `🔥 连续签到: ${userData.consecutiveDays}天`
+                        );
+                    }
                 }
             } else {
                 await sendReply(ctx, event, result.error || '签到失败，请稍后重试');
@@ -173,7 +188,8 @@ export async function handleCheckinCommand(
         if (useImageMode && imageBuffer) {
             // 图片模式：发送图片卡片
             const base64Image = imageBuffer.toString('base64');
-            const message: OB11PostSendMsg['message'] = [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const message: any = [
                 {
                     type: 'image',
                     data: {

@@ -375,19 +375,28 @@ export interface UpdateTemplateParams {
 }
 
 /**
+ * 模板随机模式
+ */
+export type TemplateRandomMode = 'none' | 'random' | 'sequential' | 'daily';
+
+/**
  * 插件模板配置
  */
 export interface PluginTemplateConfig {
-    /** 是否启用随机模板 */
-    enableRandomTemplate: boolean;
-    /** 签到模板 ID（空表示随机） */
+    /** 随机模式: none=禁用, random=随机, sequential=轮询, daily=每日一换 */
+    randomMode: TemplateRandomMode;
+    /** 签到模板 ID（randomMode为none时使用） */
     checkinTemplateId: string | null;
-    /** 排行榜模板 ID（空表示随机） */
+    /** 排行榜模板 ID（randomMode为none时使用） */
     leaderboardTemplateId: string | null;
     /** 默认签到模板 ID（fallback） */
     defaultCheckinTemplateId: string | null;
     /** 默认排行榜模板 ID（fallback） */
     defaultLeaderboardTemplateId: string | null;
+    /** 轮询模式下的当前索引 */
+    sequentialIndex: number;
+    /** 上次更换模板的日期 */
+    lastRotationDate: string;
 }
 
 // ==================== API 响应 ====================

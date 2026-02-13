@@ -221,7 +221,7 @@ export function registerTemplateManageRoutes(ctx: NapCatPluginContext): void {
     router.postNoAuth('/templates/config', (req, res) => {
         try {
             const body = req.body as {
-                enableRandomTemplate?: boolean;
+                randomMode?: 'none' | 'random' | 'sequential' | 'daily';
                 checkinTemplateId?: string | null;
                 leaderboardTemplateId?: string | null;
             } | undefined;

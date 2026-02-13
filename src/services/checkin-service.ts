@@ -193,7 +193,7 @@ function getCycleIdentifierForDate(date: Date): string {
         }
         case 'daily':
         default: {
-            return date.toISOString().split('T')[0];
+            return formatDateToString(date);
         }
     }
 }
@@ -373,7 +373,7 @@ export async function performCheckin(
         if (globalUserData && globalUserData.lastCheckinDate) {
             const config = pluginState.config.checkinRefreshTime;
             
-            // 计算上一个周期的日期
+            // 使用本地时区计算
             const now = new Date();
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
@@ -389,7 +389,7 @@ export async function performCheckin(
                 previousCycleDate.setDate(previousCycleDate.getDate() - 1);
             }
             
-            const previousCycleStr = previousCycleDate.toISOString().split('T')[0];
+            const previousCycleStr = formatDateToString(previousCycleDate);
             
             if (globalUserData.lastCheckinDate === previousCycleStr) {
                 globalConsecutiveDays = globalUserData.consecutiveDays + 1;
@@ -422,15 +422,16 @@ export async function performCheckin(
         
         globalUserData.nickname = nickname;
         
-        // 获取全局排名（即使今天已签到也要用）
+        // 获取全局排名（仅在首次签到时更新）
         const globalDailyStats = loadGroupDailyStats('global');
-        const globalRank = globalDailyStats.userIds.length + 1;
         
-        // 全局积分：每次群内签到都增加（记录总获得积分）
-        globalUserData.totalPoints += earnedPoints;
-        
-        // 只有今天没签到过才增加天数、活跃天数和历史记录
+        // 只有今天没签到过才增加积分、天数、历史记录
         if (!hasCheckedInToday) {
+            // 全局积分：每次首次签到都增加（记录总获得积分）
+            globalUserData.totalPoints += earnedPoints;
+            
+            const globalRank = globalDailyStats.userIds.length + 1;
+            
             globalUserData.totalCheckinDays += 1;
             
             // 更新活跃天数（每天首次使用机器人，不管在哪个群）
@@ -464,7 +465,8 @@ export async function performCheckin(
         saveGlobalUsersData();
         
         // 6. 如果指定了群，使用新的双轨制积分系统奖励积分
-        let groupRank = globalRank;
+        // 群内签到：只在群内增加积分，不影响全局数据
+        let groupRank = 0;
         let groupUserData: GroupUserCheckinData | undefined = undefined;
         if (groupId) {
             // 先确保群内用户数据存在
@@ -536,7 +538,7 @@ export async function performCheckin(
                         previousCycleDate.setDate(previousCycleDate.getDate() - 1);
                     }
                     
-                    const previousCycleStr = previousCycleDate.toISOString().split('T')[0];
+                    const previousCycleStr = formatDateToString(previousCycleDate);
                     
                     if (groupUserData.lastCheckinDate === previousCycleStr) {
                         groupConsecutiveDays = groupUserData.consecutiveDays + 1;

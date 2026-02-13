@@ -3,7 +3,7 @@
  * 管理签到和排行榜模板的存储、CRUD 和随机选择
  */
 
-import type { TemplateData, TemplateType, CreateTemplateParams, UpdateTemplateParams } from '../types';
+import type { TemplateData, TemplateType, CreateTemplateParams, UpdateTemplateParams, TemplateRandomMode } from '../types';
 import { pluginState } from '../core/state';
 
 const TEMPLATES_FILE = 'templates.json';
@@ -11,11 +11,13 @@ const TEMPLATE_CONFIG_FILE = 'template-config.json';
 
 let templatesCache: Map<string, TemplateData> = new Map();
 let templateConfigCache: {
-    enableRandomTemplate: boolean;
+    randomMode: TemplateRandomMode;
     checkinTemplateId: string | null;
     leaderboardTemplateId: string | null;
     defaultCheckinTemplateId: string | null;
     defaultLeaderboardTemplateId: string | null;
+    sequentialIndex: number;
+    lastRotationDate: string;
 } | null = null;
 
 function generateId(): string {
@@ -44,30 +46,36 @@ export function saveTemplates(): void {
 }
 
 export function loadTemplateConfig(): {
-    enableRandomTemplate: boolean;
+    randomMode: TemplateRandomMode;
     checkinTemplateId: string | null;
     leaderboardTemplateId: string | null;
     defaultCheckinTemplateId: string | null;
     defaultLeaderboardTemplateId: string | null;
+    sequentialIndex: number;
+    lastRotationDate: string;
 } {
     if (!templateConfigCache) {
         templateConfigCache = pluginState.loadDataFile(TEMPLATE_CONFIG_FILE, {
-            enableRandomTemplate: false,
+            randomMode: 'none',
             checkinTemplateId: null,
             leaderboardTemplateId: null,
             defaultCheckinTemplateId: null,
             defaultLeaderboardTemplateId: null,
+            sequentialIndex: 0,
+            lastRotationDate: '',
         });
     }
     return templateConfigCache;
 }
 
 export function saveTemplateConfig(config: {
-    enableRandomTemplate?: boolean;
+    randomMode?: TemplateRandomMode;
     checkinTemplateId?: string | null;
     leaderboardTemplateId?: string | null;
     defaultCheckinTemplateId?: string | null;
     defaultLeaderboardTemplateId?: string | null;
+    sequentialIndex?: number;
+    lastRotationDate?: string;
 }): void {
     const currentConfig = loadTemplateConfig();
     const newConfig = { ...currentConfig, ...config };
@@ -167,11 +175,43 @@ export function getRandomTemplate(type: TemplateType): TemplateData | null {
 
 export function getTemplateForSend(type: TemplateType): TemplateData | null {
     const config = loadTemplateConfig();
+    const today = getNowDateStr();
     
-    if (config.enableRandomTemplate) {
+    // 根据随机模式选择模板
+    if (config.randomMode === 'random') {
         return getRandomTemplate(type);
     }
     
+    // 轮询模式：每次调用轮换到下一个
+    if (config.randomMode === 'sequential') {
+        const enabledTemplates = getTemplatesByType(type);
+        if (enabledTemplates.length === 0) return null;
+        
+        // 更新索引
+        const newIndex = (config.sequentialIndex + 1) % enabledTemplates.length;
+        saveTemplateConfig({ sequentialIndex: newIndex });
+        
+        return enabledTemplates[config.sequentialIndex] || enabledTemplates[0];
+    }
+    
+    // 每日一换模式：每天更换模板
+    if (config.randomMode === 'daily') {
+        if (config.lastRotationDate !== today) {
+            // 新的一天，随机选择一个并更新日期
+            const template = getRandomTemplate(type);
+            if (template) {
+                saveTemplateConfig({ lastRotationDate: today });
+            }
+            return template;
+        }
+        // 同一天，使用之前选中的模板（通过 sequentialIndex 存储）
+        const enabledTemplates = getTemplatesByType(type);
+        if (enabledTemplates.length === 0) return null;
+        const index = config.sequentialIndex % enabledTemplates.length;
+        return enabledTemplates[index] || enabledTemplates[0];
+    }
+    
+    // none 模式：使用指定的模板
     const templateId = type === 'checkin' ? config.checkinTemplateId : config.leaderboardTemplateId;
     
     if (templateId) {

@@ -398,7 +398,8 @@ async function sendLeaderboard(
     if (useImageMode && imageBuffer) {
         // 图片模式：发送图片卡片
         const base64Image = imageBuffer.toString('base64');
-        const message: OB11PostSendMsg['message'] = [
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const message: any = [
             {
                 type: 'image',
                 data: {
