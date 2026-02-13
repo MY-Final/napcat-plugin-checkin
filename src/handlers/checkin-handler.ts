@@ -138,10 +138,10 @@ export async function handleCheckinCommand(
         }
 
         // 生成签到卡片
-        // 如果在群内签到，显示群内累计经验值；否则显示全局积分
-        const displayTotalPoints = groupId && result.groupUserData
+        // 双轨制：统一使用 totalExp 显示累计经验值
+        const displayTotalExp = groupId && result.groupUserData
             ? result.groupUserData.totalExp
-            : result.userData.totalPoints;
+            : result.userData.totalExp;
 
         // 获取当前日期信息
         const now = new Date();
@@ -155,7 +155,7 @@ export async function handleCheckinCommand(
             avatarUrl: getAvatarUrl(userId),
             earnedPoints: result.earnedPoints,
             totalDays: result.userData.totalCheckinDays,
-            totalPoints: displayTotalPoints,
+            totalPoints: displayTotalExp,  // 双轨制：显示累计经验值
             todayRank: result.todayRank,
             checkinTime: result.checkinTime,
             currentDate: getCurrentDateStr(),
@@ -216,7 +216,7 @@ export async function handleCheckinCommand(
                     groupName: groupName || groupId,
                     earnedPoints: result.earnedPoints,
                     consecutiveDays: result.consecutiveDays,
-                    totalPoints: displayTotalPoints,
+                    totalPoints: displayTotalExp,  // 双轨制：显示累计经验值
                     totalDays: result.userData.totalCheckinDays,
                     basePoints: result.breakdown?.base || result.earnedPoints,
                     consecutiveBonus: result.breakdown?.consecutiveBonus || 0,
@@ -275,10 +275,8 @@ export async function handleCheckinQuery(
                 ? getGroupTodayCheckinCount(String(groupId))
                 : getTodayCheckinCount();
                 
-            // 根据数据类型显示不同的积分字段
-            const displayPoints = isGroupData 
-                ? (displayData as GroupUserCheckinData).totalExp 
-                : (displayData as UserCheckinData).totalPoints;
+            // 双轨制：统一使用 totalExp 显示累计经验值
+            const displayPoints = displayData.totalExp;
             
             const text = [
                 `📊 ${displayData.nickname} 的签到数据`,
@@ -332,7 +330,7 @@ export async function handleCheckinQuery(
             // 全服排行
             const allUsers = getAllUsersData();
             const sortedUsers = Array.from(allUsers.values())
-                .sort((a, b) => b.totalPoints - a.totalPoints)
+                .sort((a, b) => b.totalExp - a.totalExp)
                 .slice(0, 10);
             
             if (sortedUsers.length === 0) {
@@ -345,7 +343,7 @@ export async function handleCheckinQuery(
                 ``,
                 ...sortedUsers.map((user, index) => {
                     const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
-                    return `${medal} ${user.nickname} - ${user.totalPoints}分 (${user.totalCheckinDays}天)`;
+                    return `${medal} ${user.nickname} - ${user.totalExp}分 (${user.totalCheckinDays}天)`;
                 }),
                 ``,
                 `💡 使用 "${pluginState.config.commandPrefix}我的积分" 查看个人详情`,

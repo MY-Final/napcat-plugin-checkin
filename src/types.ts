@@ -416,7 +416,11 @@ export interface ApiResponse<T = unknown> {
 // ==================== 签到数据 ====================
 
 /**
- * 用户签到数据（全局）
+ * 用户签到数据（全服统计）- 双轨制积分系统
+ * 
+ * 双轨制说明：
+ * - totalExp: 累计经验值（只增不减，用于全服排名）
+ * - balance: 可用余额（可增可减，跨群通用）
  */
 export interface UserCheckinData {
     /** 用户QQ号 */
@@ -427,8 +431,22 @@ export interface UserCheckinData {
     totalCheckinDays: number;
     /** 连续签到天数（全服） */
     consecutiveDays: number;
-    /** 总积分（全服） */
-    totalPoints: number;
+    
+    // ========== 双轨制积分（核心字段）==========
+    /** 
+     * 累计经验值（Total Experience Points）- 全服
+     * 特性：只增不减，用于全服排名统计
+     * 类比：江湖地位、历史贡献
+     */
+    totalExp: number;
+    
+    /** 
+     * 可用余额（Balance / Spendable Points）- 全服
+     * 特性：可增可减，跨群通用
+     * 类比：钱包余额、活期存款
+     */
+    balance: number;
+    
     /** 最后签到日期 YYYY-MM-DD（全服） */
     lastCheckinDate: string;
     /** 签到历史记录 */
@@ -437,6 +455,24 @@ export interface UserCheckinData {
     activeDays: number;
     /** 最后活跃日期 YYYY-MM-DD */
     lastActiveDate: string;
+    
+    // ========== 全服等级系统 ==========
+    /** 当前等级（基于 totalExp 计算） */
+    level: number;
+    /** 等级名称 */
+    levelName: string;
+    /** 等级图标 */
+    levelIcon: string;
+    
+    // ========== 交易流水 ==========
+    /** 交易记录（用于积分追踪和审计） */
+    transactionLog: TransactionRecord[];
+    
+    // ========== 数据版本 ==========
+    /** 数据版本号（用于迁移） */
+    dataVersion: number;
+    /** 数据迁移时间 */
+    migratedAt?: string;
 }
 
 /**
@@ -755,12 +791,14 @@ export interface LeaderboardUser {
     avatarUrl: string;
     /** 周期内积分 */
     periodPoints: number;
-    /** 总积分 */
+    /** 总积分（双轨制累计经验值） */
     totalPoints: number;
     /** 签到天数 */
     checkinDays: number;
     /** 排名 */
     rank: number;
+    /** 兼容字段：双轨制累计经验值 */
+    totalExp?: number;
 }
 
 /**

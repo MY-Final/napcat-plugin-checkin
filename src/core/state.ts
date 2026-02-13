@@ -113,6 +113,7 @@ class PluginState {
         this.startTime = Date.now();
         this.ensureDataDir();
         this.checkAndRepairData(); // 检查并修复数据
+        this.migrateToDualTrackSystem(); // 迁移到双轨制
         this.loadConfig();
         this.fetchSelfId();
     }
@@ -166,49 +167,161 @@ class PluginState {
     // ==================== 通用数据文件读写 ====================
 
     /**
-     * 读取 JSON 数据文件
-     * 常用于订阅数据、定时任务配置、推送历史等持久化数据
-     * @param filename 数据文件名（如 'subscriptions.json'）
-     * @param defaultValue 文件不存在或解析失败时的默认值
+     * 检查数据是否为空或无效
+     * 空对象、空数组、null、undefined 都被视为无效数据
      */
-    loadDataFile<T>(filename: string, defaultValue: T): T {
-        const filePath = this.getDataFilePath(filename);
+    private isDataEmptyOrInvalid<T>(data: T): boolean {
+        if (data === null || data === undefined) return true;
+        if (typeof data !== 'object') return false; // 原始类型不算无效
+        
+        // 检查对象是否为空
+        if (Array.isArray(data)) {
+            return data.length === 0;
+        }
+        
+        // 检查对象是否有任何属性
+        return Object.keys(data).length === 0;
+    }
+
+    /**
+     * 获取多版本备份文件路径
+     * @param filePath 主文件路径
+     * @param version 备份版本号（1-5）
+     */
+    private getBackupPath(filePath: string, version: number = 1): string {
+        return version === 1 ? `${filePath}.backup` : `${filePath}.backup.${version}`;
+    }
+
+    /**
+     * 轮转备份文件（保留最近5个版本）
+     * backup.5 -> backup.4 -> backup.3 -> backup.2 -> backup.1 -> backup
+     */
+    private rotateBackups(filePath: string): void {
         try {
-            if (fs.existsSync(filePath)) {
-                const content = fs.readFileSync(filePath, 'utf-8');
-                return JSON.parse(content);
+            // 删除最旧的备份（版本5）
+            const oldestBackup = this.getBackupPath(filePath, 5);
+            if (fs.existsSync(oldestBackup)) {
+                fs.unlinkSync(oldestBackup);
+            }
+            
+            // 依次移动备份文件：4->5, 3->4, 2->3, 1->2
+            for (let i = 4; i >= 1; i--) {
+                const oldPath = this.getBackupPath(filePath, i);
+                const newPath = this.getBackupPath(filePath, i + 1);
+                if (fs.existsSync(oldPath)) {
+                    fs.renameSync(oldPath, newPath);
+                }
+            }
+            
+            // 将当前备份移动到版本1
+            const currentBackup = this.getBackupPath(filePath, 1);
+            if (fs.existsSync(currentBackup)) {
+                const version1Path = this.getBackupPath(filePath, 2);
+                fs.renameSync(currentBackup, version1Path);
             }
         } catch (e) {
-            this.logger.warn("[数据保护] 读取数据文件 " + filename + " 失败，尝试从备份恢复:", e);
-            // 尝试从备份恢复
-            const backupPath = filePath + '.backup';
+            this.logger.debug(`[备份轮转] 轮转备份文件失败: ${e}`);
+        }
+    }
+
+    /**
+     * 尝试从备份恢复数据（支持多版本）
+     * @param filePath 主文件路径
+     * @returns 恢复的数据或null
+     */
+    private tryRestoreFromBackup<T>(filePath: string): T | null {
+        // 尝试从最新到最旧的备份恢复
+        for (let i = 1; i <= 5; i++) {
+            const backupPath = this.getBackupPath(filePath, i);
             if (fs.existsSync(backupPath)) {
                 try {
                     const content = fs.readFileSync(backupPath, 'utf-8');
                     const data = JSON.parse(content);
-                    // 恢复主文件
-                    fs.copyFileSync(backupPath, filePath);
-                    this.logger.info(`(｡･ω･｡) 已从备份恢复数据文件: ${filename}`);
-                    return data;
-                } catch (backupError) {
-                    this.logger.error(`(╥﹏╥) 从备份恢复 ${filename} 失败:`, backupError);
+                    
+                    // 验证恢复的数据是否有效
+                    if (!this.isDataEmptyOrInvalid(data)) {
+                        // 恢复主文件
+                        fs.copyFileSync(backupPath, filePath);
+                        const versionText = i === 1 ? '最新' : `版本${i}`;
+                        this.logger.info(`(｡･ω･｡) 已从${versionText}备份恢复数据文件`);
+                        return data;
+                    }
+                } catch (e) {
+                    this.logger.debug(`[数据恢复] 备份版本${i}无效，尝试更旧的备份`);
+                    continue;
                 }
             }
+        }
+        return null;
+    }
+
+    /**
+     * 读取 JSON 数据文件
+     * 增强版：支持空数据检测、多版本备份恢复
+     * @param filename 数据文件名（如 'subscriptions.json'）
+     * @param defaultValue 文件不存在或解析失败时的默认值
+     * @param options 可选配置
+     */
+    loadDataFile<T>(
+        filename: string, 
+        defaultValue: T, 
+        options?: { 
+            validateEmpty?: boolean;  // 是否验证数据为空
+            dataKey?: string;         // 检查的数据键名（如 'users'）
+        }
+    ): T {
+        const filePath = this.getDataFilePath(filename);
+        const validateEmpty = options?.validateEmpty ?? true;
+        const dataKey = options?.dataKey;
+        
+        try {
+            if (fs.existsSync(filePath)) {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const data = JSON.parse(content);
+                
+                // 检查数据是否为空（如果启用验证）
+                if (validateEmpty) {
+                    const dataToCheck = dataKey && typeof data === 'object' && data !== null 
+                        ? (data as Record<string, unknown>)[dataKey] 
+                        : data;
+                    
+                    if (this.isDataEmptyOrInvalid(dataToCheck)) {
+                        this.logger.warn(`[数据保护] 数据文件 ${filename} 内容为空或无效，尝试从备份恢复`);
+                        const restoredData = this.tryRestoreFromBackup<T>(filePath);
+                        if (restoredData !== null) {
+                            return restoredData;
+                        }
+                        this.logger.error(`(╥﹏╥) 无法从任何备份恢复 ${filename}，使用默认值`);
+                    }
+                }
+                
+                return data;
+            }
+        } catch (e) {
+            this.logger.warn("[数据保护] 读取数据文件 " + filename + " 失败，尝试从备份恢复:", e);
+            const restoredData = this.tryRestoreFromBackup<T>(filePath);
+            if (restoredData !== null) {
+                return restoredData;
+            }
+            this.logger.error(`(╥﹏╥) 无法从任何备份恢复 ${filename}，使用默认值`);
         }
         return defaultValue;
     }
 
     /**
      * 保存 JSON 数据文件
+     * 增强版：多版本备份机制，保留最近5个版本
      * @param filename 数据文件名
      * @param data 要保存的数据
      */
     saveDataFile<T>(filename: string, data: T): void {
         const filePath = this.getDataFilePath(filename);
         try {
-            // 备份旧数据（如果存在）
+            // 轮转备份（保留历史版本）
             if (fs.existsSync(filePath)) {
-                const backupPath = filePath + '.backup';
+                this.rotateBackups(filePath);
+                // 创建当前备份
+                const backupPath = this.getBackupPath(filePath, 1);
                 fs.copyFileSync(filePath, backupPath);
             }
             // 写入新数据
@@ -221,67 +334,271 @@ class PluginState {
     /**
      * 从备份恢复数据文件
      * @param filename 数据文件名
+     * @param version 指定版本（1=最新，5=最旧），不传则尝试所有版本
      * @returns 是否恢复成功
      */
-    restoreDataFile(filename: string): boolean {
+    restoreDataFile(filename: string, version?: number): boolean {
         const filePath = this.getDataFilePath(filename);
-        const backupPath = filePath + '.backup';
-        try {
-            if (fs.existsSync(backupPath)) {
-                fs.copyFileSync(backupPath, filePath);
-                this.logger.info(`(｡･ω･｡) 已从备份恢复数据文件: ${filename}`);
+        
+        if (version !== undefined) {
+            // 恢复指定版本
+            const backupPath = this.getBackupPath(filePath, version);
+            try {
+                if (fs.existsSync(backupPath)) {
+                    fs.copyFileSync(backupPath, filePath);
+                    this.logger.info(`(｡･ω･｡) 已从备份版本${version}恢复数据文件: ${filename}`);
+                    return true;
+                }
+            } catch (e) {
+                this.logger.error(`(╥﹏╥) 从备份版本${version}恢复 ${filename} 失败:`, e);
+            }
+        } else {
+            // 尝试所有版本
+            const result = this.tryRestoreFromBackup(filePath);
+            if (result !== null) {
                 return true;
             }
-        } catch (e) {
-            this.logger.error("(╥﹏╥) 恢复数据文件 " + filename + " 失败:", e);
         }
         return false;
     }
 
     /**
-     * 检查并修复数据文件
-     * 在插件启动时调用，确保数据完整性
+     * 获取所有数据文件列表（包括群数据文件、模板配置、日志配置等）
      */
-    checkAndRepairData(): void {
+    private getAllDataFiles(): string[] {
         const dataPath = this.ctx.dataPath;
-        const dataFiles = [
-            'checkin-users.json',
-            'checkin-daily.json',
-            'plugin-config.json'
+        const allFiles: string[] = [];
+        
+        // 需要扫描的目录及其相对路径映射
+        const dirsToScan = [
+            { dir: dataPath, prefix: '' },
+            { dir: path.join(dataPath, 'logs'), prefix: 'logs/' },
         ];
         
-        for (const filename of dataFiles) {
-            const filePath = path.join(dataPath, filename);
-            const backupPath = filePath + '.backup';
-            
-            // 检查主文件是否存在且有效
-            let needsRestore = false;
-            if (fs.existsSync(filePath)) {
-                try {
-                    const content = fs.readFileSync(filePath, 'utf-8');
-                    JSON.parse(content); // 验证JSON格式
-                } catch (e) {
-                    this.logger.warn(`[数据保护] 数据文件 ${filename} 损坏，尝试从备份恢复`);
-                    needsRestore = true;
-                }
-            } else {
-                // 主文件不存在，尝试从备份恢复
-                if (fs.existsSync(backupPath)) {
-                    needsRestore = true;
-                    this.logger.info(`(｡･ω･｡) 数据文件 ${filename} 不存在，尝试从备份恢复`);
+        // 所有需要保护的标准数据文件
+        const standardFiles = [
+            'checkin-users.json',
+            'plugin-config.json',
+            'templates.json',
+            'template-config.json',
+        ];
+        
+        try {
+            for (const { dir, prefix } of dirsToScan) {
+                if (fs.existsSync(dir)) {
+                    const files = fs.readdirSync(dir);
+                    
+                    // 群数据文件
+                    const groupFiles = files.filter(f => 
+                        f.startsWith('checkin-group-') && f.endsWith('.json') && !f.includes('.backup')
+                    ).map(f => prefix + f);
+                    
+                    // logs 目录下的 JSON 文件
+                    const logFiles = files.filter(f => 
+                        f.endsWith('.json') && !f.includes('.backup') && !f.includes('.legacy')
+                    ).map(f => prefix + f);
+                    
+                    allFiles.push(...groupFiles, ...logFiles);
                 }
             }
             
-            // 需要恢复且备份存在
-            if (needsRestore && fs.existsSync(backupPath)) {
-                try {
-                    fs.copyFileSync(backupPath, filePath);
+            // 添加标准文件确保它们被检查
+            for (const f of standardFiles) {
+                if (!allFiles.includes(f)) {
+                    allFiles.push(f);
+                }
+            }
+            
+            // 去重
+            return [...new Set(allFiles)];
+        } catch (e) {
+            this.logger.debug('[数据扫描] 扫描数据目录失败:', e);
+        }
+        
+        return standardFiles;
+    }
+
+    /**
+     * 验证数据文件内容是否有效
+     */
+    private validateDataFile(filePath: string): { valid: boolean; empty: boolean; error?: string } {
+        try {
+            if (!fs.existsSync(filePath)) {
+                return { valid: false, empty: true, error: '文件不存在' };
+            }
+            
+            const content = fs.readFileSync(filePath, 'utf-8');
+            if (!content || content.trim() === '') {
+                return { valid: false, empty: true, error: '文件为空' };
+            }
+            
+            const data = JSON.parse(content);
+            
+            // 检查是否为 null 或空对象/数组
+            if (data === null) {
+                return { valid: false, empty: true, error: '数据为null' };
+            }
+            
+            if (typeof data === 'object') {
+                if (Array.isArray(data) && data.length === 0) {
+                    return { valid: true, empty: true };
+                }
+                if (!Array.isArray(data) && Object.keys(data).length === 0) {
+                    return { valid: true, empty: true };
+                }
+            }
+            
+            return { valid: true, empty: false };
+        } catch (e) {
+            return { valid: false, empty: false, error: String(e) };
+        }
+    }
+
+    /**
+     * 检查并修复数据文件
+     * 增强版：自动扫描所有数据文件，支持多版本备份恢复
+     */
+    checkAndRepairData(): void {
+        const dataFiles = this.getAllDataFiles();
+        let repairedCount = 0;
+        let failedCount = 0;
+        
+        for (const filename of dataFiles) {
+            const filePath = this.getDataFilePath(filename);
+            const validation = this.validateDataFile(filePath);
+            
+            let needsRestore = false;
+            
+            if (!validation.valid) {
+                this.logger.warn(`[数据保护] 数据文件 ${filename} ${validation.error}，尝试从备份恢复`);
+                needsRestore = true;
+            } else if (validation.empty) {
+                this.logger.warn(`[数据保护] 数据文件 ${filename} 内容为空，尝试从备份恢复`);
+                needsRestore = true;
+            }
+            
+            if (needsRestore) {
+                const restored = this.tryRestoreFromBackup(filePath);
+                if (restored !== null) {
+                    repairedCount++;
                     this.logger.info(`(｡･ω･｡) 成功恢复数据文件: ${filename}`);
-                } catch (e) {
-                    this.logger.error(`(╥﹏╥) 恢复数据文件 ${filename} 失败:`, e);
+                } else {
+                    failedCount++;
+                    this.logger.error(`(╥﹏╥) 无法恢复数据文件 ${filename}（无可用备份）`);
                 }
             }
         }
+        
+        if (repairedCount > 0 || failedCount > 0) {
+            this.logger.info(`[数据保护] 数据检查完成: 修复 ${repairedCount} 个, 失败 ${failedCount} 个`);
+        } else {
+            this.logger.debug('[数据保护] 所有数据文件检查通过');
+        }
+    }
+
+    // ==================== 双轨制数据迁移 ====================
+
+    /**
+     * 迁移到双轨制积分系统
+     * 将旧版单轨制数据（totalPoints）转换为新版双轨制（totalExp/balance）
+     */
+    migrateToDualTrackSystem(): void {
+        this.logger.info('[数据迁移] 开始检查双轨制数据迁移...');
+        
+        let migratedCount = 0;
+        
+        // 1. 迁移全局用户数据
+        migratedCount += this.migrateGlobalUsersData();
+        
+        // 2. 迁移群用户数据（由 points-migration.service 处理）
+        // 群数据会在签到时自动迁移，或者由迁移服务处理
+        
+        if (migratedCount > 0) {
+            this.logger.info(`(｡･ω･｡) 双轨制数据迁移完成: 迁移 ${migratedCount} 个用户`);
+        } else {
+            this.logger.debug('[数据迁移] 所有数据已是双轨制，无需迁移');
+        }
+    }
+
+    /**
+     * 迁移全局用户数据到双轨制
+     */
+    private migrateGlobalUsersData(): number {
+        const filePath = this.getDataFilePath('checkin-users.json');
+        let migratedCount = 0;
+        
+        try {
+            if (!fs.existsSync(filePath)) {
+                return 0;
+            }
+            
+            const content = fs.readFileSync(filePath, 'utf-8');
+            const data = JSON.parse(content) as Record<string, unknown>;
+            
+            // 检查是否有旧版数据（存在 totalPoints 但没有 totalExp）
+            let needsMigration = false;
+            for (const [userId, userData] of Object.entries(data)) {
+                if (isObject(userData)) {
+                    // 检查是否为旧版数据（有 totalPoints 但没有 dataVersion）
+                    const hasOldTotalPoints = typeof userData.totalPoints === 'number';
+                    const hasNewTotalExp = typeof userData.totalExp === 'number';
+                    const hasDataVersion = typeof userData.dataVersion === 'number';
+                    
+                    if (hasOldTotalPoints && (!hasNewTotalExp || !hasDataVersion)) {
+                        needsMigration = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!needsMigration) {
+                return 0;
+            }
+            
+            this.logger.info('[数据迁移] 发现旧版单轨制数据，开始迁移到双轨制...');
+            
+            // 备份旧数据
+            const backupPath = filePath + '.legacy-backup';
+            fs.copyFileSync(filePath, backupPath);
+            this.logger.info(`(｡･ω･｡) 已创建旧数据备份: ${backupPath}`);
+            
+            // 执行迁移
+            for (const [userId, userData] of Object.entries(data)) {
+                if (isObject(userData)) {
+                    const hasOldTotalPoints = typeof userData.totalPoints === 'number';
+                    const hasDataVersion = typeof userData.dataVersion === 'number';
+                    
+                    if (hasOldTotalPoints && !hasDataVersion) {
+                        const oldPoints = userData.totalPoints as number;
+                        
+                        // 转换为双轨制
+                        (userData as Record<string, unknown>).totalExp = oldPoints;
+                        (userData as Record<string, unknown>).balance = oldPoints;
+                        (userData as Record<string, unknown>).level = 1;
+                        (userData as Record<string, unknown>).levelName = '初来乍到';
+                        (userData as Record<string, unknown>).levelIcon = '🌱';
+                        (userData as Record<string, unknown>).transactionLog = [];
+                        (userData as Record<string, unknown>).dataVersion = 2;
+                        (userData as Record<string, unknown>).migratedAt = new Date().toISOString().split('T')[0];
+                        
+                        // 删除旧字段
+                        delete (userData as Record<string, unknown>).totalPoints;
+                        
+                        migratedCount++;
+                        this.logger.debug(`[数据迁移] 用户 ${userId}: ${oldPoints}分 -> 双轨制(Exp=${oldPoints}, Balance=${oldPoints})`);
+                    }
+                }
+            }
+            
+            // 保存迁移后的数据
+            fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+            this.logger.info(`(｡･ω･｡) 全局用户数据迁移完成: ${migratedCount} 个用户`);
+            
+        } catch (e) {
+            this.logger.error('(╥﹏╥) 全局用户数据迁移失败:', e);
+        }
+        
+        return migratedCount;
     }
 
     // ==================== 配置管理 ====================

@@ -133,7 +133,7 @@ export function registerUserRoutes(ctx: NapCatPluginContext): void {
             const usersList = Array.from(allUsers.values()).map(user => ({
                 userId: user.userId,
                 nickname: user.nickname,
-                totalPoints: user.totalPoints,
+                totalPoints: user.totalExp,  // 双轨制：使用 totalExp
                 totalCheckinDays: user.totalCheckinDays,
                 consecutiveDays: user.consecutiveDays,
                 lastCheckinDate: user.lastCheckinDate,

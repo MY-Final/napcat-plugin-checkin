@@ -20,6 +20,60 @@ import type { TemplateType, CreateTemplateParams, UpdateTemplateParams } from '.
 export function registerTemplateManageRoutes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
 
+    // 注意：这些路由必须在 /templates/:id 之前定义，否则 /templates/config 会被当作 :id 处理
+    router.getNoAuth('/templates/config', (_req, res) => {
+        try {
+            const config = loadTemplateConfig();
+            res.json({
+                code: 0,
+                data: config,
+            });
+        } catch (err) {
+            ctx.logger.error('获取模板配置失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    router.postNoAuth('/templates/config', (req, res) => {
+        try {
+            const body = req.body as {
+                randomMode?: 'none' | 'random' | 'sequential' | 'daily';
+                checkinTemplateId?: string | null;
+                leaderboardTemplateId?: string | null;
+            } | undefined;
+
+            if (!body) {
+                return res.status(400).json({ code: -1, message: '缺少配置参数' });
+            }
+
+            saveTemplateConfig(body);
+
+            ctx.logger.info('模板配置已更新');
+
+            res.json({
+                code: 0,
+                message: '配置已更新',
+            });
+        } catch (err) {
+            ctx.logger.error('更新模板配置失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    router.postNoAuth('/templates/init-defaults', (_req, res) => {
+        try {
+            initDefaultTemplates();
+            ctx.logger.info('默认模板初始化完成');
+            res.json({
+                code: 0,
+                message: '初始化成功',
+            });
+        } catch (err) {
+            ctx.logger.error('初始化默认模板失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
     router.getNoAuth('/templates', (_req, res) => {
         try {
             const templates = getAllTemplates();
@@ -201,59 +255,6 @@ export function registerTemplateManageRoutes(ctx: NapCatPluginContext): void {
             });
         } catch (err) {
             ctx.logger.error('设置默认模板失败:', err);
-            res.status(500).json({ code: -1, message: String(err) });
-        }
-    });
-
-    router.getNoAuth('/templates/config', (_req, res) => {
-        try {
-            const config = loadTemplateConfig();
-            res.json({
-                code: 0,
-                data: config,
-            });
-        } catch (err) {
-            ctx.logger.error('获取模板配置失败:', err);
-            res.status(500).json({ code: -1, message: String(err) });
-        }
-    });
-
-    router.postNoAuth('/templates/config', (req, res) => {
-        try {
-            const body = req.body as {
-                randomMode?: 'none' | 'random' | 'sequential' | 'daily';
-                checkinTemplateId?: string | null;
-                leaderboardTemplateId?: string | null;
-            } | undefined;
-
-            if (!body) {
-                return res.status(400).json({ code: -1, message: '缺少配置参数' });
-            }
-
-            saveTemplateConfig(body);
-
-            ctx.logger.info('模板配置已更新');
-
-            res.json({
-                code: 0,
-                message: '配置已更新',
-            });
-        } catch (err) {
-            ctx.logger.error('更新模板配置失败:', err);
-            res.status(500).json({ code: -1, message: String(err) });
-        }
-    });
-
-    router.postNoAuth('/templates/init-defaults', (_req, res) => {
-        try {
-            initDefaultTemplates();
-            ctx.logger.info('默认模板初始化完成');
-            res.json({
-                code: 0,
-                message: '初始化成功',
-            });
-        } catch (err) {
-            ctx.logger.error('初始化默认模板失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });

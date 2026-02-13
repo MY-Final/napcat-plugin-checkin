@@ -15,6 +15,7 @@ import type {
 import { pluginState } from '../core/state';
 import { calculatePoints } from './points-calculator';
 import { PointsCoreService } from './points/points-core.service';
+import { calculateLevel } from '../config/level-config';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -114,7 +115,9 @@ function canCheckinToday(userId: string, groupId: string | undefined, todayStr: 
         const globalUserData = globalUsers.get(userId);
         
         if (pluginState.config.checkinRefreshTime.cycleType === 'daily') {
-            const globalCheckinCount = globalUserData?.lastCheckinDate === todayStr ? 1 : 0;
+            // 统计今日全局签到次数
+            const checkinHistory = globalUserData?.checkinHistory || [];
+            const globalCheckinCount = checkinHistory.filter(record => record.date === todayStr).length;
             const maxCount = pluginState.config.checkinRefreshTime.cycleCount || 1;
             
             return {
@@ -151,8 +154,9 @@ function canCheckinToday(userId: string, groupId: string | undefined, todayStr: 
     }
     
     if (cycleType === 'daily') {
-        // 检查今天在该群签到次数
-        const todayCheckinCount = groupUserData.lastCheckinDate === todayStr ? 1 : 0;
+        // 检查今天在该群签到次数 - 通过统计签到历史
+        const checkinHistory = groupUserData.checkinHistory || [];
+        const todayCheckinCount = checkinHistory.filter(record => record.date === todayStr).length;
         return {
             canCheckin: todayCheckinCount < maxCount,
             checkedInCount: todayCheckinCount
@@ -218,8 +222,17 @@ function getGroupDataFile(groupId: string): string {
  */
 function loadGlobalUsersData(): Map<string, UserCheckinData> {
     if (usersCache.size === 0) {
-        const data = pluginState.loadDataFile<Record<string, UserCheckinData>>(USERS_DATA_FILE, {});
-        usersCache = new Map(Object.entries(data));
+        try {
+            const data = pluginState.loadDataFile<Record<string, UserCheckinData>>(
+                USERS_DATA_FILE, 
+                {},
+                { validateEmpty: true }  // 启用空数据检测
+            );
+            usersCache = new Map(Object.entries(data || {}));
+        } catch (e) {
+            pluginState.logger.error('加载全局用户数据失败:', e);
+            usersCache = new Map();
+        }
     }
     return usersCache;
 }
@@ -241,7 +254,11 @@ export function loadGroupUsersData(groupId: string): Map<string, GroupUserChecki
         const groupData = pluginState.loadDataFile<{
             users?: Record<string, GroupUserCheckinData>;
             dailyStats?: Record<string, DailyCheckinStats>;
-        }>(fileName, {});
+        }>(
+            fileName, 
+            {},
+            { validateEmpty: true, dataKey: 'users' }  // 启用空数据检测，检查 users 字段
+        );
         groupUsersCache.set(groupId, new Map(Object.entries(groupData.users || {})));
     }
     return groupUsersCache.get(groupId)!;
@@ -249,6 +266,7 @@ export function loadGroupUsersData(groupId: string): Map<string, GroupUserChecki
 
 /**
  * 保存群内用户数据
+ * 使用增量更新策略，避免覆盖其他字段（如 dailyStats）
  * @param groupId 群号
  * @param groupName 群名称（可选，首次保存时传入）
  */
@@ -257,18 +275,24 @@ export function saveGroupUsersData(groupId: string, groupName?: string): void {
     if (!users) return;
     
     const fileName = getGroupDataFile(groupId);
-    const groupData = pluginState.loadDataFile<{
+    // 先读取现有数据，确保不丢失其他字段（如 dailyStats）
+    const existingData = pluginState.loadDataFile<{
         groupName?: string;
         users?: Record<string, GroupUserCheckinData>;
         dailyStats?: Record<string, DailyCheckinStats>;
-    }>(fileName, {});
+    }>(
+        fileName, 
+        {},
+        { validateEmpty: true, dataKey: 'users' }
+    );
     
-    // 更新群名称（如果提供了）
-    if (groupName) {
-        groupData.groupName = groupName;
-    }
+    // 合并数据：保留现有字段，更新 users
+    const groupData = {
+        ...existingData,                    // 保留所有现有字段
+        groupName: groupName || existingData.groupName,  // 更新群名称
+        users: Object.fromEntries(users),   // 更新用户数据
+    };
     
-    groupData.users = Object.fromEntries(users);
     pluginState.saveDataFile(fileName, groupData);
 }
 
@@ -301,6 +325,7 @@ function loadGroupDailyStats(groupId: string): DailyCheckinStats {
 
 /**
  * 保存今日统计数据（按群）
+ * 使用增量更新策略，避免覆盖用户数据
  */
 function saveGroupDailyStats(groupId: string): void {
     const today = getTodayStr();
@@ -310,16 +335,25 @@ function saveGroupDailyStats(groupId: string): void {
     if (!stats) return;
     
     const fileName = getGroupDataFile(groupId);
-    const groupData = pluginState.loadDataFile<{
+    // 先读取现有数据，确保不丢失用户数据
+    const existingData = pluginState.loadDataFile<{
         users?: Record<string, GroupUserCheckinData>;
         dailyStats?: Record<string, DailyCheckinStats>;
-    }>(fileName, {});
+    }>(
+        fileName, 
+        {},
+        { validateEmpty: true, dataKey: 'users' }
+    );
     
-    if (!groupData.dailyStats) {
-        groupData.dailyStats = {};
-    }
+    // 合并数据：保留用户数据，更新今日统计
+    const groupData = {
+        ...existingData,  // 保留所有现有字段（包括 users）
+        dailyStats: {
+            ...existingData.dailyStats,  // 保留其他日期的统计
+            [today]: stats,              // 更新今日统计
+        },
+    };
     
-    groupData.dailyStats[today] = stats;
     pluginState.saveDataFile(fileName, groupData);
 }
 
@@ -412,11 +446,17 @@ export async function performCheckin(
                 nickname,
                 totalCheckinDays: 0,
                 consecutiveDays: 0,
-                totalPoints: 0,
+                totalExp: 0,
+                balance: 0,
+                level: 1,
+                levelName: '初来乍到',
+                levelIcon: '🌱',
                 lastCheckinDate: '',
                 checkinHistory: [],
                 activeDays: 0,
                 lastActiveDate: '',
+                transactionLog: [],
+                dataVersion: 2,
             };
         }
         
@@ -427,8 +467,9 @@ export async function performCheckin(
         
         // 只有今天没签到过才增加积分、天数、历史记录
         if (!hasCheckedInToday) {
-            // 全局积分：每次首次签到都增加（记录总获得积分）
-            globalUserData.totalPoints += earnedPoints;
+            // 双轨制积分：每次首次签到都增加
+            globalUserData.totalExp += earnedPoints;  // 累计经验值（只增不减，用于排名）
+            globalUserData.balance += earnedPoints;    // 可用余额（可消费）
             
             const globalRank = globalDailyStats.userIds.length + 1;
             
@@ -460,6 +501,17 @@ export async function performCheckin(
         
         globalUserData.consecutiveDays = globalConsecutiveDays;
         globalUserData.lastCheckinDate = today;
+        
+        // 计算全服等级
+        const globalLevelInfo = calculateLevel(globalUserData.totalExp);
+        if (globalLevelInfo.level > globalUserData.level) {
+            globalUserData.level = globalLevelInfo.level;
+            globalUserData.levelName = globalLevelInfo.name;
+            globalUserData.levelIcon = globalLevelInfo.icon;
+            pluginState.logger.info(
+                `[全服升级] 用户 ${nickname}(${userId}) 升级到 Lv.${globalLevelInfo.level} ${globalLevelInfo.name}`
+            );
+        }
         
         globalUsers.set(userId, globalUserData);
         saveGlobalUsersData();
@@ -498,6 +550,10 @@ export async function performCheckin(
             }
             
             // 使用 PointsCoreService 奖励积分（双轨制）
+            // 获取今日已签到次数，用于生成唯一的幂等键
+            const todayCheckinCount = groupUserData.checkinHistory.filter(
+                record => record.date === today
+            ).length;
             const awardResult = await PointsCoreService.awardPoints(
                 groupId,
                 userId,
@@ -506,9 +562,9 @@ export async function performCheckin(
                     groupId,
                     amount: earnedPoints,
                     source: 'signin',
-                    description: `每日签到奖励 (${today})`,
+                    description: `每日签到奖励 (${today} 第${todayCheckinCount + 1}次)`,
                     applyLevelBonus: true,
-                    idempotencyKey: `signin-${groupId}-${userId}-${today}`,
+                    idempotencyKey: `signin-${groupId}-${userId}-${today}-${todayCheckinCount + 1}`,
                 }
             );
             
@@ -634,21 +690,27 @@ export function getActiveRanking(limit: number = 100): Array<{
     nickname: string;
     activeDays: number;
     totalCheckinDays: number;
-    totalPoints: number;
+    totalExp: number;
     lastActiveDate: string;
 }> {
-    const allUsers = loadGlobalUsersData();
-    return Array.from(allUsers.values())
-        .sort((a, b) => b.activeDays - a.activeDays)
-        .slice(0, limit)
-        .map(user => ({
-            userId: user.userId,
-            nickname: user.nickname,
-            activeDays: user.activeDays || 0,
-            totalCheckinDays: user.totalCheckinDays,
-            totalPoints: user.totalPoints,
-            lastActiveDate: user.lastActiveDate || '',
-        }));
+    try {
+        const allUsers = loadGlobalUsersData();
+        return Array.from(allUsers.values())
+            .filter(user => user && typeof user === 'object')
+            .sort((a, b) => (b?.activeDays || 0) - (a?.activeDays || 0))
+            .slice(0, limit)
+            .map(user => ({
+                userId: user?.userId || '',
+                nickname: user?.nickname || '未知用户',
+                activeDays: user?.activeDays || 0,
+                totalCheckinDays: user?.totalCheckinDays || 0,
+                totalExp: user?.totalExp || 0,
+                lastActiveDate: user?.lastActiveDate || '',
+            }));
+    } catch (e) {
+        pluginState.logger.error('获取活跃排行失败:', e);
+        return [];
+    }
 }
 
 /**

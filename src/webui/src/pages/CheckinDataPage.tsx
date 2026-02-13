@@ -109,7 +109,7 @@ export default function CheckinDataPage() {
                                             </span>
                                             <span className="text-gray-300 dark:text-gray-700">|</span>
                                             <span className="text-gray-600 dark:text-gray-400">
-                                                <span className="font-medium text-brand-500">{group.totalPoints.toLocaleString()}</span> 分
+                                                <span className="font-medium text-brand-500">{(group.totalPoints || 0).toLocaleString()}</span> 分
                                             </span>
                                         </div>
                                     </div>
@@ -140,7 +140,7 @@ export default function CheckinDataPage() {
                             ) : selectedGroupData.groupId} 签到排行
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            群内共 {selectedGroupData.totalCheckins} 人签到，总积分 {selectedGroupData.totalPoints.toLocaleString()}，今日 {selectedGroupData.todayCheckins} 人签到
+                            群内共 {selectedGroupData.totalCheckins} 人签到，总积分 {(selectedGroupData.totalPoints || 0).toLocaleString()}，今日 {selectedGroupData.todayCheckins} 人签到
                         </p>
                     </div>
                     <div className="overflow-x-auto">
@@ -189,7 +189,7 @@ export default function CheckinDataPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-sm font-bold text-brand-500">{user.groupPoints.toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-brand-500">{(user.groupPoints || 0).toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-sm font-bold text-green-500">{user.balance?.toLocaleString() || 0}</span>

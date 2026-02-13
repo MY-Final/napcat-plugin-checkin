@@ -34,8 +34,12 @@ function getNowDateTimeStr(): string {
 
 export function loadTemplates(): Map<string, TemplateData> {
     if (templatesCache.size === 0) {
-        const data = pluginState.loadDataFile<Record<string, TemplateData>>(TEMPLATES_FILE, {});
-        templatesCache = new Map(Object.entries(data));
+        const data = pluginState.loadDataFile<Record<string, TemplateData>>(
+            TEMPLATES_FILE, 
+            {},
+            { validateEmpty: true }  // 启用空数据检测
+        );
+        templatesCache = new Map(Object.entries(data || {}));
     }
     return templatesCache;
 }
@@ -63,7 +67,7 @@ export function loadTemplateConfig(): {
             defaultLeaderboardTemplateId: null,
             sequentialIndex: 0,
             lastRotationDate: '',
-        });
+        }, { validateEmpty: true });
     }
     return templateConfigCache;
 }

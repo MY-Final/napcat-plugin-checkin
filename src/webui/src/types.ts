@@ -109,7 +109,8 @@ export interface ActiveRankingItem {
     nickname: string
     activeDays: number
     totalCheckinDays: number
-    totalPoints: number
+    totalExp?: number  // 双轨制：累计经验值
+    totalPoints?: number  // 兼容旧数据
     lastActiveDate: string
 }
 
@@ -170,6 +171,8 @@ export interface LeaderboardUser {
     totalPoints: number
     checkinDays: number
     rank: number
+    // 兼容字段
+    totalExp?: number
 }
 
 export interface LeaderboardData {

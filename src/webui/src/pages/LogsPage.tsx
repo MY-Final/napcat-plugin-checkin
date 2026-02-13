@@ -14,7 +14,8 @@ interface CheckinLog {
     time: string
     earnedPoints: number
     consecutiveDays: number
-    totalPoints: number
+    totalExp: number  // 双轨制：累计经验值
+    totalPoints: number  // 兼容旧数据
     totalDays: number
     basePoints: number
     consecutiveBonus: number
@@ -36,7 +37,7 @@ interface LogStats {
     dailyAverage: number
     totalLogs: number
     dailyStats: { date: string; checkinCount: number; totalPoints: number; userCount: number }[]
-    topUsers: { userId: string; nickname: string; checkinCount: number; totalPoints: number; lastCheckinTime: number }[]
+    topUsers: { userId: string; nickname: string; checkinCount: number; totalExp?: number; totalPoints?: number; lastCheckinTime: number }[]
     topGroups: { groupId: string; groupName: string; checkinCount: number; userCount: number; totalPoints: number }[]
 }
 
@@ -311,7 +312,7 @@ export default function LogsPage() {
                                         <p className="font-medium text-gray-900 dark:text-white truncate">{user.nickname}</p>
                                         <p className="text-xs text-gray-500">{user.checkinCount} 次签到</p>
                                     </div>
-                                    <span className="text-sm font-medium text-green-600">{user.totalPoints} 积分</span>
+                                    <span className="text-sm font-medium text-green-600">{(user.totalExp || user.totalPoints || 0).toLocaleString()} 积分</span>
                                 </div>
                             ))}
                         </div>

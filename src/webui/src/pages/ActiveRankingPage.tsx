@@ -130,7 +130,7 @@ export default function ActiveRankingPage() {
                                         {user.totalCheckinDays} 天
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                        {user.totalPoints.toLocaleString()}
+                                        {(user.totalExp || user.totalPoints || 0).toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                         {user.lastActiveDate}

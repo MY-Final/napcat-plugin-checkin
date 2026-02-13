@@ -42,13 +42,17 @@ export const plugin_init: PluginModule['plugin_init'] = async (ctx) => {
 
         ctx.logger.info('📅 NapCat 签到插件初始化中...');
 
-        // 2. 生成配置 Schema（用于 NapCat WebUI 配置面板）
+        // 2. 初始化默认模板（确保模板存在）
+        const { initDefaultTemplates } = await import('./services/template-service');
+        initDefaultTemplates();
+
+        // 3. 生成配置 Schema（用于 NapCat WebUI 配置面板）
         plugin_config_ui = buildConfigSchema(ctx);
 
-        // 3. 注册 WebUI 页面和静态资源
+        // 4. 注册 WebUI 页面和静态资源
         registerWebUI(ctx);
 
-        // 4. 注册 API 路由
+        // 5. 注册 API 路由
         registerApiRoutes(ctx);
         registerTemplateManageRoutes(ctx);
 
