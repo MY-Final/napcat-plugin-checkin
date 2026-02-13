@@ -54,7 +54,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   }
 }`
   },
-  {
+{
     id: 'active-ranking',
     method: 'GET',
     path: '/checkin/active-ranking',
@@ -72,6 +72,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
         "nickname": "用户名",
         "activeDays": 50,
         "totalCheckinDays": 48,
+        "totalExp": 1000,
         "lastActiveDate": "2026-02-11"
       }
     ]
@@ -200,7 +201,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   }
 }`
   },
-  {
+{
     id: 'all-users',
     method: 'GET',
     path: '/checkin/users',
@@ -212,7 +213,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     {
       "userId": "123456",
       "nickname": "用户名",
-      "totalPoints": 1000,
+      "totalExp": 1000,
       "totalCheckinDays": 50,
       "consecutiveDays": 3,
       "lastCheckinDate": "2026-02-11"
@@ -484,7 +485,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   "message": "清理完成"
 }`
   },
-  {
+{
     id: 'logs',
     method: 'GET',
     path: '/logs',
@@ -518,7 +519,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
         "earnedPoints": 25,
         "consecutiveBonus": 6,
         "weekendBonus": 0,
-        "totalPoints": 1105,
+        "totalExp": 1105,
         "totalCheckinDays": 50,
         "consecutiveDays": 3,
         "todayRank": 5,
@@ -626,7 +627,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   }
 }`
   },
-  {
+{
     id: 'logs-detail',
     method: 'GET',
     path: '/logs/:id',
@@ -645,8 +646,8 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     "time": "14:30:25",
     "earnedPoints": 25,
     "consecutiveBonus": 6,
-    "week0,
-    "endBonus": totalPoints": 1105,
+    "weekendBonus": 0,
+    "totalExp": 1105,
     "totalCheckinDays": 50,
     "consecutiveDays": 3,
     "todayRank": 5,
@@ -1179,29 +1180,33 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   "message": "设置成功"
 }`
   },
-  {
+{
     id: 'templates-config-get',
     method: 'GET',
     path: '/templates/config',
     title: '获取模板配置',
-    description: '获取当前模板配置（随机模板开关、指定模板等）',
+    description: '获取当前模板配置（随机模式、指定模板等）',
     response: `{
   "code": 0,
   "data": {
-    "enableRandomTemplate": true,
+    "randomMode": "none",
     "checkinTemplateId": null,
-    "leaderboardTemplateId": null
+    "leaderboardTemplateId": null,
+    "defaultCheckinTemplateId": null,
+    "defaultLeaderboardTemplateId": null,
+    "sequentialIndex": 0,
+    "lastRotationDate": ""
   }
 }`
   },
-  {
+{
     id: 'templates-config-save',
     method: 'POST',
     path: '/templates/config',
     title: '保存模板配置',
-    description: '更新模板配置（随机模板开关、指定模板）',
+    description: '更新模板配置（随机模式、指定模板）',
     params: [
-      { name: 'enableRandomTemplate', type: 'boolean', required: false, description: '是否启用随机模板' },
+      { name: 'randomMode', type: 'string', required: false, description: '随机模式: none | random | sequential | daily' },
       { name: 'checkinTemplateId', type: 'string', required: false, description: '指定签到模板 ID（null 为使用默认）' },
       { name: 'leaderboardTemplateId', type: 'string', required: false, description: '指定排行榜模板 ID（null 为使用默认）' },
     ],
@@ -1210,7 +1215,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   "message": "配置已更新"
 }`,
     example: `{
-  "enableRandomTemplate": false,
+  "randomMode": "random",
   "checkinTemplateId": "my-custom-template",
   "leaderboardTemplateId": null
 }`
