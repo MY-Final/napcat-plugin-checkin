@@ -177,12 +177,6 @@ pluginState.timers.set('jobId', timer);
 2. 使用 NapCat WebUI 测试插件功能
 3. 在 NapCat 控制台检查日志
 
-## 类型检查
-
-提交前务必运行类型检查：
-```bash
-pnpm run typecheck
-```
 
 TypeScript 配置: `tsconfig.json`
 - 目标: ESNext
