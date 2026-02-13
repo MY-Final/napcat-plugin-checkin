@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { noAuthFetch } from '../utils/api'
+import { noAuthFetch, authFetch } from '../utils/api'
 import { showToast } from '../hooks/useToast'
 import type { PluginConfig } from '../types'
 import { IconTerminal } from '../components/icons'
@@ -22,7 +22,7 @@ export default function ConfigPage() {
         setSaving(true)
         try {
             const newConfig = { ...config, ...update }
-            await noAuthFetch('/config', {
+            await authFetch('/config', {
                 method: 'POST',
                 body: JSON.stringify(newConfig),
             })

@@ -19,7 +19,6 @@ import type { LogQueryParams, StatsTimeRange } from '../../types';
 
 export function registerLogRoutes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
-    ctx.logger.info('[签到日志] 正在注册日志路由...');
 
     /**
      * 分页查询日志
@@ -340,14 +339,4 @@ export function registerLogRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    ctx.logger.info('[签到日志] 日志路由注册完成，共注册以下路由:');
-    ctx.logger.info('  - GET  /logs');
-    ctx.logger.info('  - GET  /logs/stats');
-    ctx.logger.info('  - GET  /logs/trend');
-    ctx.logger.info('  - GET  /logs/users/:userId');
-    ctx.logger.info('  - GET  /logs/groups/:groupId');
-    ctx.logger.info('  - GET  /logs/:id');
-    ctx.logger.info('  - GET  /logs/config');
-    ctx.logger.info('  - POST /logs/config/:groupId');
-    ctx.logger.info('  - POST /logs/cleanup');
 }

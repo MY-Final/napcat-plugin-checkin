@@ -255,8 +255,8 @@ export default function LeaderboardPage() {
                                                     <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">
                                                         {user.nickname}
                                                     </h4>
-                                                    <span className="text-lg font-bold text-brand-500">
-                                                        {user.periodPoints.toLocaleString()}
+                                                     <span className="text-lg font-bold text-brand-500">
+                                                        {(user.periodPoints || 0).toLocaleString()}
                                                         <span className="text-xs text-gray-400 ml-1">积分</span>
                                                     </span>
                                                 </div>
