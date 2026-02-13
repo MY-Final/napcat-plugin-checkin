@@ -14,11 +14,13 @@ interface Template {
 }
 
 interface TemplateConfig {
-    enableRandomTemplate: boolean
+    randomMode: 'none' | 'random' | 'sequential' | 'daily'
     checkinTemplateId: string | null
     leaderboardTemplateId: string | null
     defaultCheckinTemplateId: string | null
     defaultLeaderboardTemplateId: string | null
+    sequentialIndex: number
+    lastRotationDate: string
 }
 
 const EMPTY_HTML = `<!DOCTYPE html>
@@ -378,7 +380,7 @@ const LEADERBOARD_VARIABLES = [
 export default function TemplateListPage() {
     const [templates, setTemplates] = useState<Template[]>([])
     const [loading, setLoading] = useState(true)
-    const [enableRandomTemplate, setEnableRandomTemplate] = useState(false)
+    const [randomMode, setRandomMode] = useState<'none' | 'random' | 'sequential' | 'daily'>('none')
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [editForm, setEditForm] = useState({ name: '', html: '' })
@@ -404,9 +406,9 @@ export default function TemplateListPage() {
 
     const loadConfig = useCallback(async () => {
         try {
-            const res = await noAuthFetch<{ enableRandomTemplate: boolean }>('/templates/config')
+            const res = await noAuthFetch<TemplateConfig>('/templates/config')
             if (res.code === 0 && res.data) {
-                setEnableRandomTemplate(!!res.data.enableRandomTemplate)
+                setRandomMode(res.data.randomMode || 'none')
             }
         } catch (error) {
             console.error('加载配置失败:', error)
@@ -569,8 +571,8 @@ export default function TemplateListPage() {
                 body: JSON.stringify({ [key]: value }),
             })
             if (res.code === 0) {
-                if (key === 'enableRandomTemplate') {
-                    setEnableRandomTemplate(!!value)
+                if (key === 'randomMode') {
+                    setRandomMode(value)
                 }
                 showToast('配置已更新', 'success')
                 loadConfig()
@@ -773,17 +775,26 @@ export default function TemplateListPage() {
                             <h3 className="font-medium text-gray-900 dark:text-white">模板设置</h3>
                         </div>
                         <div className="p-4 space-y-4">
-                            <label className="flex items-center gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={enableRandomTemplate}
-                                    onChange={(e) => handleConfigChange('enableRandomTemplate', e.target.checked)}
-                                    className="rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                                />
-                                <span className="text-sm text-gray-700 dark:text-gray-300">启用随机模板</span>
-                            </label>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    模板选择模式
+                                </label>
+                                <select
+                                    value={randomMode}
+                                    onChange={(e) => handleConfigChange('randomMode', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-[#0f0f10] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                                >
+                                    <option value="none">禁用（使用指定模板）</option>
+                                    <option value="random">随机模式</option>
+                                    <option value="sequential">轮询模式</option>
+                                    <option value="daily">每日一换</option>
+                                </select>
+                            </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                开启后，每次发送卡片时会随机选择一个启用的模板
+                                {randomMode === 'none' && '使用下方指定的模板'}
+                                {randomMode === 'random' && '每次签到随机选择一个模板'}
+                                {randomMode === 'sequential' && '每次签到轮换到下一个模板'}
+                                {randomMode === 'daily' && '每天首次签到随机选择模板，当天固定使用'}
                             </p>
                         </div>
                     </div>
