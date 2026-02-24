@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getLeaderboard, noAuthFetch } from '../utils/api'
 import { showToast } from '../hooks/useToast'
 import type { LeaderboardData, LeaderboardType, GroupInfo } from '../types'
+import { IconSearch, IconX } from '../components/icons'
 
 export default function LeaderboardPage() {
     const [groups, setGroups] = useState<{ groupId: string; groupName: string }[]>([])
     const [selectedGroup, setSelectedGroup] = useState<string>('')
+    const [searchQuery, setSearchQuery] = useState<string>('')
+    const [dropdownOpen, setDropdownOpen] = useState<boolean>(false)
     const [leaderboardType, setLeaderboardType] = useState<LeaderboardType>('week')
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
     const [loading, setLoading] = useState(false)
     const [initialLoading, setInitialLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const searchRef = useRef<HTMLDivElement>(null)
 
     const typeNames: Record<LeaderboardType, string> = {
         week: '本周排行榜',
@@ -38,6 +42,7 @@ export default function LeaderboardPage() {
                 setGroups(formattedGroups)
                 if (formattedGroups.length > 0 && !selectedGroup) {
                     setSelectedGroup(formattedGroups[0].groupId)
+                    setSearchQuery(formattedGroups[0].groupName || `群 ${formattedGroups[0].groupId}`)
                 }
             } else {
                 setError('获取群组列表失败')
@@ -79,11 +84,48 @@ export default function LeaderboardPage() {
         }
     }, [selectedGroup, leaderboardType])
 
+    // 点击外部关闭下拉框
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [])
+
     const getRankStyle = (rank: number) => {
         if (rank === 1) return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white shadow-lg shadow-yellow-200'
         if (rank === 2) return 'bg-gradient-to-r from-gray-300 to-gray-500 text-white shadow-lg shadow-gray-200'
         if (rank === 3) return 'bg-gradient-to-r from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-200'
         return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+    }
+
+    // 搜索过滤逻辑 - 优化：始终显示所有群组作为可选项，搜索只是过滤显示
+    const filteredGroups = groups.filter(group => {
+        if (!searchQuery) return true
+        const query = searchQuery.toLowerCase()
+        const matchName = group.groupName?.toLowerCase().includes(query)
+        const matchId = group.groupId.includes(query)
+        return matchName || matchId
+    })
+
+    // 选择群组
+    const handleSelectGroup = (group: { groupId: string; groupName: string }) => {
+        setSelectedGroup(group.groupId)
+        // 选中后显示群名称，方便用户识别
+        setSearchQuery(group.groupName || `群 ${group.groupId}`)
+        setDropdownOpen(false)
+    }
+
+    // 清空搜索 - 恢复显示当前选中群组的名称
+    const handleClearSearch = () => {
+        const currentGroup = groups.find(g => g.groupId === selectedGroup)
+        setSearchQuery(currentGroup?.groupName || (selectedGroup ? `群 ${selectedGroup}` : ''))
+        setDropdownOpen(false)
     }
 
     const maxPoints = leaderboardData?.users[0]?.periodPoints || 1
@@ -114,38 +156,68 @@ export default function LeaderboardPage() {
                         </p>
                     </div>
                     
-                    <div className="flex flex-wrap gap-3">
-                        {/* 群选择 */}
-                        <div className="relative">
-                            <select
-                                value={selectedGroup}
-                                onChange={(e) => setSelectedGroup(e.target.value)}
-                                className="appearance-none px-4 py-2.5 pr-10 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent min-w-[160px]"
-                            >
-                                {groups.length === 0 ? (
-                                    <option value="">暂无群组数据</option>
-                                ) : (
-                                    groups.map(group => (
-                                        <option key={group.groupId} value={group.groupId}>
-                                            {group.groupName || `群 ${group.groupId}`}
-                                        </option>
-                                    ))
+                    <div className="flex items-center gap-3 w-full">
+                        {/* 搜索选择器 - 组合框 */}
+                        <div className="relative flex-1 max-w-md" ref={searchRef}>
+                            <div className="relative">
+                                <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    placeholder="搜索群名称或群号..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value)
+                                        setDropdownOpen(true)
+                                    }}
+                                    onFocus={() => setDropdownOpen(true)}
+                                    className="w-full rounded-lg pl-9 pr-9 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={handleClearSearch}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    >
+                                        <IconX size={14} />
+                                    </button>
                                 )}
-                            </select>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
                             </div>
+                            
+                            {/* 下拉列表 */}
+                            {dropdownOpen && filteredGroups.length > 0 && (
+                                <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-auto">
+                                    {filteredGroups.map(group => (
+                                        <div
+                                            key={group.groupId}
+                                            onClick={() => handleSelectGroup(group)}
+                                            className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                                selectedGroup === group.groupId ? 'bg-brand-50 dark:bg-brand-900/20' : ''
+                                            }`}
+                                        >
+                                            <div className="font-medium text-sm text-gray-900 dark:text-white">
+                                                {group.groupName || '未知群'}
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                群号: {group.groupId}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            
+                            {dropdownOpen && searchQuery && filteredGroups.length === 0 && (
+                                <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    未找到匹配的群组
+                                </div>
+                            )}
                         </div>
 
                         {/* 类型切换 */}
-                        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                             {(Object.keys(typeNames) as LeaderboardType[]).map(type => (
                                 <button
                                     key={type}
                                     onClick={() => setLeaderboardType(type)}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
                                         leaderboardType === type
                                             ? 'bg-white dark:bg-[#1a1b1d] text-brand-600 dark:text-brand-400 shadow-sm'
                                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -160,23 +232,18 @@ export default function LeaderboardPage() {
                         <button
                             onClick={fetchLeaderboard}
                             disabled={loading || !selectedGroup}
-                            className="px-4 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl text-sm font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                         >
                             {loading ? (
-                                <>
+                                <span className="flex items-center gap-2">
                                     <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     加载中
-                                </>
+                                </span>
                             ) : (
-                                <>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    刷新
-                                </>
+                                '刷新'
                             )}
                         </button>
                     </div>
@@ -185,7 +252,7 @@ export default function LeaderboardPage() {
 
             {/* 错误提示 */}
             {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                     <div className="flex items-center gap-3">
                         <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -398,7 +465,7 @@ export default function LeaderboardPage() {
                 <div className="bg-white dark:bg-[#1a1b1d] rounded-2xl p-12 text-center border border-gray-200 dark:border-gray-800">
                     <div className="text-6xl mb-4">👥</div>
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">请先选择群组</h3>
-                    <p className="text-gray-500 dark:text-gray-400">请从上方下拉菜单选择一个群组查看排行榜</p>
+                    <p className="text-gray-500 dark:text-gray-400">请从上方搜索并选择群组查看排行榜</p>
                 </div>
             )}
         </div>

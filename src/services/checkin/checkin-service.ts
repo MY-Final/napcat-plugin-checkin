@@ -1,18 +1,14 @@
 /**
- * 重构后的签到服务
- * 支持分群签到，每个群独立统计
+ * 签到服务主入口
+ * 整合所有签到相关功能，提供统一的API接口
  */
 
-// 从新的文件夹结构导入
-import {
-    // 核心签到功能
-    performCheckin,
-    
-    // 查询和统计功能
-    getUserCheckinData,
-    getGroupUserCheckinData,
-    getAllUsersData,
-    getActiveRanking,
+import { performCheckin } from './checkin-core';
+import { 
+    getUserCheckinData, 
+    getGroupUserCheckinData, 
+    getAllUsersData, 
+    getActiveRanking, 
     getGroupAllUsersData,
     getTodayCheckinCount,
     getGroupTodayCheckinCount,
@@ -22,24 +18,17 @@ import {
     getGroupTodayRanking,
     cleanupOldData,
     getGroupCheckinStats,
-    getAllGroupsStats,
-    
-    // 积分管理功能
-    getGroupUserPoints,
-    updateGroupUserPoints,
-    getGroupUserPointsHistory,
-    resetGroupUserPoints,
-    
-    // 数据管理功能
-    loadGroupUsersData,
-    saveGroupUsersData,
-    loadGroupDailyStats,
-    saveGroupDailyStats,
-    canCheckinToday,
-    getGroupDataFile,
-} from './checkin/checkin-service';
+    getAllGroupsStats
+} from './checkin-queries';
+import { 
+    getGroupUserPoints, 
+    updateGroupUserPoints, 
+    getGroupUserPointsHistory, 
+    resetGroupUserPoints 
+} from './checkin-points';
+import { loadGroupUsersData, saveGroupUsersData, loadGroupDailyStats, saveGroupDailyStats, canCheckinToday, getGroupDataFile } from './checkin-data';
 
-// 重新导出所有功能，保持接口不变
+// 导出所有功能
 export {
     // 核心签到功能
     performCheckin,
@@ -75,5 +64,5 @@ export {
     getGroupDataFile,
 };
 
-// 确保类型也被导出
-export type { CheckinResult } from '../types';
+// 导出类型
+export type { CheckinResult } from '../../types';
