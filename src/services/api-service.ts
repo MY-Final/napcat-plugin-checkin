@@ -24,46 +24,44 @@ import { registerLogRoutes } from './api/log-routes';
  * 注册 API 路由
  */
 export function registerApiRoutes(ctx: NapCatPluginContext): void {
-    // 插件信息
-    registerStatusRoutes(ctx);
-    
-    // 配置管理
-    registerConfigRoutes(ctx);
-    
-    // 群管理
-    registerGroupRoutes(ctx);
-    
-    // 用户数据
-    registerUserRoutes(ctx);
-    
-    // 签到统计
-    registerStatsRoutes(ctx);
-    
-    // 排行榜
-    registerRankingRoutes(ctx);
-    
-    // 群签到统计
-    registerGroupCheckinRoutes(ctx);
-    
-    // 积分管理
-    registerPointsRoutes(ctx);
-    
-    // 排行榜数据
-    registerLeaderboardRoutes(ctx);
-    
-    // 模板预览
-    registerTemplateRoutes(ctx);
-    
-    // 模板管理
-    registerTemplateManageRoutes(ctx);
-    
-    // v1 API (双轨制积分系统)
-    registerV1Routes(ctx);
-    
-    // 签到日志
-    registerLogRoutes(ctx);
+    // 使用路由聚合器进行分组注册，便于后续拆分
+    const routerManager = createRouterManager(ctx)
+    routerManager.registerAll()
+    ctx.logger.debug('API 路由注册完成')
+}
 
-    ctx.logger.debug('API 路由注册完成');
+// 构建一个简单的路由聚合管理器，解耦单个路由注册点
+function createRouterManager(ctx: NapCatPluginContext) {
+    return {
+        registerAll() {
+            // 插件信息
+            registerStatusRoutes(ctx)
+            // 配置管理
+            registerConfigRoutes(ctx)
+            // 群管理
+            registerGroupRoutes(ctx)
+            // 用户数据
+            registerUserRoutes(ctx)
+            // 签到统计
+            registerStatsRoutes(ctx)
+            // 排行榜
+            registerRankingRoutes(ctx)
+            // 群签到统计
+            registerGroupCheckinRoutes(ctx)
+            // 积分管理
+            registerPointsRoutes(ctx)
+            // 排行榜数据
+            registerLeaderboardRoutes(ctx)
+            // 模板预览
+            registerTemplateRoutes(ctx)
+            // 模板管理
+            registerTemplateManageRoutes(ctx)
+            // v1 API (双轨制积分系统)
+            registerV1Routes(ctx)
+            // 签到日志
+            registerLogRoutes(ctx)
+        }
+    }
 }
 
 // 导出工具函数供其他模块使用
