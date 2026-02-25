@@ -156,8 +156,8 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   "message": "ok"
 }`
   },
-  {
-    id: 'user-data',
+{
+    id: 'user-checkin-data',
     method: 'GET',
     path: '/checkin/user/:id',
     title: '用户签到数据',
@@ -1526,7 +1526,7 @@ function getSectionEndpoints(sectionId: string): ApiEndpoint[] {
     const sections: Record<string, ApiEndpoint[]> = {
       '核心接口': API_ENDPOINTS.filter(e => ['status'].includes(e.id)),
       '签到数据': API_ENDPOINTS.filter(e => ['today-stats', 'active-ranking', 'checkin-stats', 'groups', 'update-group-config', 'bulk-group-config'].includes(e.id)),
-      '用户数据': API_ENDPOINTS.filter(e => ['user-data', 'user-balance', 'all-users'].includes(e.id)),
+      '用户数据': API_ENDPOINTS.filter(e => ['user-checkin-data', 'user-balance', 'all-users'].includes(e.id)),
       '群签到数据': API_ENDPOINTS.filter(e => ['group-stats', 'all-groups-stats', 'group-ranking', 'group-checkin-ranking'].includes(e.id)),
       '积分排行': API_ENDPOINTS.filter(e => ['global-ranking'].includes(e.id)),
       '积分管理': API_ENDPOINTS.filter(e => ['get-user-points', 'update-user-points', 'get-points-history', 'reset-user-points'].includes(e.id)),
