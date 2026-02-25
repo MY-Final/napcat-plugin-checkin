@@ -173,6 +173,7 @@ export interface LeaderboardUser {
     rank: number
     // 兼容字段
     totalExp?: number
+    balance?: number
 }
 
 export interface LeaderboardData {

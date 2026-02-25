@@ -29,6 +29,7 @@ import {
     updateGroupUserPoints,
     getGroupUserPointsHistory,
     resetGroupUserPoints,
+    setGroupUserPoints,
     
     // 数据管理功能
     loadGroupUsersData,
@@ -65,6 +66,7 @@ export {
     updateGroupUserPoints,
     getGroupUserPointsHistory,
     resetGroupUserPoints,
+    setGroupUserPoints,
     
     // 数据管理功能
     loadGroupUsersData,

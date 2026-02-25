@@ -207,3 +207,106 @@ export function resetGroupUserPoints(
         return { success: false, error: String(error) };
     }
 }
+
+/**
+ * 直接设置群用户积分和余额（管理员操作）
+ * @param groupId 群号
+ * @param userId 用户ID
+ * @param newTotalExp 新的累计经验值（-1表示不修改）
+ * @param newBalance 新的可用余额（-1表示不修改）
+ * @param description 操作说明
+ * @param operatorId 操作者ID
+ * @returns 设置后的用户数据
+ */
+export function setGroupUserPoints(
+    groupId: string,
+    userId: string,
+    newTotalExp: number,
+    newBalance: number,
+    description: string = '管理员调整',
+    operatorId?: string
+): { success: boolean; data?: {
+    userId: string;
+    totalExp: number;
+    balance: number;
+    level: number;
+    levelName: string;
+}; error?: string } {
+    try {
+        const groupUsers = loadGroupUsersData(groupId);
+        const userData = groupUsers.get(userId);
+
+        if (!userData) {
+            return { success: false, error: '用户不存在' };
+        }
+
+        const oldTotalExp = userData.totalExp;
+        const oldBalance = userData.balance;
+        let expChanged = false;
+        let balanceChanged = false;
+
+        // 设置 totalExp（-1 表示不修改）
+        if (newTotalExp >= 0 && newTotalExp !== oldTotalExp) {
+            if (newTotalExp < 0) {
+                return { success: false, error: '经验值不能为负数' };
+            }
+            userData.totalExp = newTotalExp;
+            expChanged = true;
+        }
+
+        // 设置 balance（-1 表示不修改）
+        if (newBalance >= 0 && newBalance !== oldBalance) {
+            if (newBalance < 0) {
+                return { success: false, error: '余额不能为负数' };
+            }
+            userData.balance = newBalance;
+            balanceChanged = true;
+        }
+
+        // 如果有变更，记录到交易日志
+        if (expChanged || balanceChanged) {
+            if (!userData.transactionLog) {
+                userData.transactionLog = [];
+            }
+
+            const now = new Date();
+            userData.transactionLog.unshift({
+                id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                timestamp: now.getTime(),
+                date: now.toISOString().split('T')[0],
+                time: now.toTimeString().split(' ')[0],
+                type: 'admin',
+                expChange: expChanged ? newTotalExp - oldTotalExp : 0,
+                balanceChange: balanceChanged ? newBalance - oldBalance : 0,
+                expBefore: oldTotalExp,
+                expAfter: userData.totalExp,
+                balanceBefore: oldBalance,
+                balanceAfter: userData.balance,
+                description: description,
+                operatorId: operatorId,
+            });
+
+            // 限制历史记录长度
+            if (userData.transactionLog.length > 100) {
+                userData.transactionLog = userData.transactionLog.slice(0, 100);
+            }
+        }
+
+        // 保存数据
+        groupUsers.set(userId, userData);
+        saveGroupUsersData(groupId);
+
+        return {
+            success: true,
+            data: {
+                userId: userData.userId,
+                totalExp: userData.totalExp,
+                balance: userData.balance,
+                level: userData.level,
+                levelName: userData.levelName,
+            },
+        };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}

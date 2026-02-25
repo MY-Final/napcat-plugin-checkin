@@ -104,3 +104,25 @@ export async function getGroupStats(groupId: string): Promise<ApiResponse<GroupC
 export async function getLeaderboard(groupId: string, type: LeaderboardType): Promise<ApiResponse<LeaderboardData>> {
     return noAuthFetch(`/leaderboard/${groupId}?type=${type}`)
 }
+
+/** 设置用户积分和余额（需要鉴权） */
+export async function setUserPoints(
+    groupId: string,
+    userId: string,
+    options: {
+        totalExp?: number;
+        balance?: number;
+        description?: string;
+    }
+): Promise<ApiResponse<{
+    userId: string;
+    totalExp: number;
+    balance: number;
+    level: number;
+    levelName: string;
+}>> {
+    return authFetch(`/v1/groups/${groupId}/users/${userId}/points/set`, {
+        method: 'POST',
+        body: JSON.stringify(options)
+    })
+}

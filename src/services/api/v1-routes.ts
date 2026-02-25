@@ -8,6 +8,7 @@ import { LevelCoreService } from '../level/level-core.service';
 import { TitleService } from '../title/title.service';
 import { LEVEL_CONFIG, DEFAULT_TITLES } from '../../config/level-config';
 import { getGroupAllUsersData } from '../checkin-service';
+import { setGroupUserPoints } from '../checkin/checkin-points';
 
 export function registerV1Routes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
@@ -365,6 +366,49 @@ export function registerV1Routes(ctx: NapCatPluginContext): void {
             });
         } catch (err) {
             ctx.logger.error('获取余额排行失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 设置用户积分和余额（需要鉴权） */
+    router.post('/v1/groups/:groupId/users/:userId/points/set', (req, res) => {
+        try {
+            const groupId = req.params?.groupId;
+            const userId = req.params?.userId;
+            const body = req.body as {
+                totalExp?: number;
+                balance?: number;
+                description?: string;
+                operatorId?: string;
+            } | undefined;
+
+            if (!groupId || !userId) {
+                return res.status(400).json({ code: -1, message: '缺少群ID或用户ID' });
+            }
+
+            if (!body || (body.totalExp === undefined && body.balance === undefined)) {
+                return res.status(400).json({ code: -1, message: '至少需要提供 totalExp 或 balance' });
+            }
+
+            const newTotalExp = body.totalExp !== undefined ? body.totalExp : -1;
+            const newBalance = body.balance !== undefined ? body.balance : -1;
+
+            const result = setGroupUserPoints(
+                groupId,
+                userId,
+                newTotalExp,
+                newBalance,
+                body.description || '管理员调整',
+                body.operatorId
+            );
+
+            if (!result.success) {
+                return res.status(400).json({ code: -1, message: result.error });
+            }
+
+            res.json({ code: 0, data: result.data });
+        } catch (err) {
+            ctx.logger.error('设置用户积分失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });

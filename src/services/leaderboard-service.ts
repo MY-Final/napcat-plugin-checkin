@@ -31,6 +31,7 @@ export function getLeaderboard(
         nickname: string;
         periodPoints: number;
         totalExp: number;
+        balance: number;
         checkinDays: number;
     }> = new Map();
 
@@ -53,6 +54,7 @@ export function getLeaderboard(
                 nickname: userData.nickname,
                 periodPoints: type === 'all' ? userData.totalExp : periodPoints,
                 totalExp: userData.totalExp,
+                balance: userData.balance,
                 checkinDays: type === 'all' ? userData.totalCheckinDays : checkinDays,
             });
         }
@@ -72,6 +74,8 @@ export function getLeaderboard(
         avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${user.userId}&s=100`,
         periodPoints: user.periodPoints,
         totalPoints: user.totalExp,
+        totalExp: user.totalExp,
+        balance: user.balance,
         checkinDays: user.checkinDays,
         rank: index + 1,
     }));

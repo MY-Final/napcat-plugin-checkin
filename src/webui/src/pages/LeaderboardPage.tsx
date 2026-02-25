@@ -1,8 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { getLeaderboard, noAuthFetch } from '../utils/api'
+import { getLeaderboard, noAuthFetch, setUserPoints } from '../utils/api'
+import { Portal } from '../components/Portal'
 import { showToast } from '../hooks/useToast'
 import type { LeaderboardData, LeaderboardType, GroupInfo } from '../types'
 import { IconSearch, IconX } from '../components/icons'
+
+interface EditUser {
+    userId: string
+    nickname: string
+    totalExp: number
+    balance: number
+}
 
 export default function LeaderboardPage() {
     const [groups, setGroups] = useState<{ groupId: string; groupName: string }[]>([])
@@ -15,6 +23,14 @@ export default function LeaderboardPage() {
     const [initialLoading, setInitialLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const searchRef = useRef<HTMLDivElement>(null)
+    
+    // 编辑模态框状态
+    const [editModalOpen, setEditModalOpen] = useState(false)
+    const [editingUser, setEditingUser] = useState<EditUser | null>(null)
+    const [editTotalExp, setEditTotalExp] = useState('')
+    const [editBalance, setEditBalance] = useState('')
+    const [editDescription, setEditDescription] = useState('')
+    const [editLoading, setEditLoading] = useState(false)
 
     const typeNames: Record<LeaderboardType, string> = {
         week: '本周排行榜',
@@ -121,14 +137,81 @@ export default function LeaderboardPage() {
         setDropdownOpen(false)
     }
 
-    // 清空搜索 - 恢复显示当前选中群组的名称
+    // 清空搜索 - 真正清空搜索内容并打开下拉框
     const handleClearSearch = () => {
-        const currentGroup = groups.find(g => g.groupId === selectedGroup)
-        setSearchQuery(currentGroup?.groupName || (selectedGroup ? `群 ${selectedGroup}` : ''))
-        setDropdownOpen(false)
+        // Clear the input value and reset selection, then open dropdown
+        setSearchQuery('')
+        setSelectedGroup('')
+        setDropdownOpen(true)
+        // Focus the input to give user immediate typing feedback
+        setTimeout(() => {
+            const input = searchRef.current?.querySelector('input') as HTMLInputElement | null
+            if (input) input.focus()
+        }, 0)
     }
 
     const maxPoints = leaderboardData?.users[0]?.periodPoints || 1
+
+    // 打开编辑模态框
+    const handleOpenEdit = (user: { userId: string; nickname: string; totalExp?: number; totalPoints?: number; balance?: number }) => {
+        setEditingUser({
+            userId: user.userId,
+            nickname: user.nickname,
+            totalExp: user.totalExp || user.totalPoints || 0,
+            balance: user.balance || 0
+        })
+        setEditTotalExp(String(user.totalExp || user.totalPoints || 0))
+        setEditBalance(String(user.balance || 0))
+        setEditDescription('')
+        setEditModalOpen(true)
+    }
+
+    // 保存编辑
+    const handleSaveEdit = async () => {
+        if (!editingUser || !selectedGroup) return
+        
+        const totalExp = editTotalExp === '' ? undefined : parseInt(editTotalExp)
+        const balance = editBalance === '' ? undefined : parseInt(editBalance)
+        
+        if (totalExp !== undefined && isNaN(totalExp)) {
+            showToast('经验值必须是有效数字', 'error')
+            return
+        }
+        if (balance !== undefined && isNaN(balance)) {
+            showToast('余额必须是有效数字', 'error')
+            return
+        }
+        if (totalExp !== undefined && totalExp < 0) {
+            showToast('经验值不能为负数', 'error')
+            return
+        }
+        if (balance !== undefined && balance < 0) {
+            showToast('余额不能为负数', 'error')
+            return
+        }
+        
+        setEditLoading(true)
+        try {
+            const res = await setUserPoints(selectedGroup, editingUser.userId, {
+                totalExp,
+                balance,
+                description: editDescription || '管理员调整'
+            })
+            
+            if (res.code === 0) {
+                showToast('修改成功', 'success')
+                setEditModalOpen(false)
+                fetchLeaderboard()
+            } else {
+                showToast(res.message || '修改失败', 'error')
+            }
+        } catch (error) {
+            console.error('修改积分失败:', error)
+            showToast('修改失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error')
+        } finally {
+            setEditLoading(false)
+        }
+    }
 
     if (initialLoading && !leaderboardData && !error) {
         return (
@@ -322,10 +405,21 @@ export default function LeaderboardPage() {
                                                     <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">
                                                         {user.nickname}
                                                     </h4>
-                                                     <span className="text-lg font-bold text-brand-500">
-                                                        {(user.periodPoints || 0).toLocaleString()}
-                                                        <span className="text-xs text-gray-400 ml-1">积分</span>
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-lg font-bold text-brand-500">
+                                                            {(user.periodPoints || 0).toLocaleString()}
+                                                            <span className="text-xs text-gray-400 ml-1">积分</span>
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleOpenEdit(user)}
+                                                            className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-brand-100 dark:hover:bg-brand-900/30 text-gray-500 hover:text-brand-500 transition-colors"
+                                                            title="编辑积分"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 
                                                 {/* 进度条 */}
@@ -467,6 +561,94 @@ export default function LeaderboardPage() {
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">请先选择群组</h3>
                     <p className="text-gray-500 dark:text-gray-400">请从上方搜索并选择群组查看排行榜</p>
                 </div>
+            )}
+
+            {/* 编辑积分模态框 */}
+            {editModalOpen && editingUser && (
+                <Portal>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/50" onClick={() => setEditModalOpen(false)}></div>
+                        <div className="relative bg-white dark:bg-[#1a1b1d] rounded-2xl p-6 w-full max-w-md shadow-xl">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">编辑用户积分</h3>
+                                <button
+                                    onClick={() => setEditModalOpen(false)}
+                                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+                                >
+                                    <IconX size={20} />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        用户
+                                    </label>
+                                    <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-gray-900 dark:text-white">
+                                        {editingUser.nickname} ({editingUser.userId})
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        累计经验值 (totalExp)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={editTotalExp}
+                                        onChange={(e) => setEditTotalExp(e.target.value)}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                        placeholder="留空表示不修改"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">用于排名和等级计算，留空则不修改</p>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        可用余额 (balance)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={editBalance}
+                                        onChange={(e) => setEditBalance(e.target.value)}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                        placeholder="留空表示不修改"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">可用于消费和兑换，留空则不修改</p>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        操作说明
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                        placeholder="可选，用于记录本次操作原因"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    onClick={() => setEditModalOpen(false)}
+                                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors"
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    onClick={handleSaveEdit}
+                                    disabled={editLoading}
+                                    className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    {editLoading ? '保存中...' : '保存'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Portal>
             )}
         </div>
     )

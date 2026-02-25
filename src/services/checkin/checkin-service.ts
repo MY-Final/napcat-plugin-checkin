@@ -24,7 +24,8 @@ import {
     getGroupUserPoints, 
     updateGroupUserPoints, 
     getGroupUserPointsHistory, 
-    resetGroupUserPoints 
+    resetGroupUserPoints,
+    setGroupUserPoints
 } from './checkin-points';
 import { loadGroupUsersData, saveGroupUsersData, loadGroupDailyStats, saveGroupDailyStats, canCheckinToday, getGroupDataFile } from './checkin-data';
 
@@ -54,6 +55,7 @@ export {
     updateGroupUserPoints,
     getGroupUserPointsHistory,
     resetGroupUserPoints,
+    setGroupUserPoints,
     
     // 数据管理功能
     loadGroupUsersData,
