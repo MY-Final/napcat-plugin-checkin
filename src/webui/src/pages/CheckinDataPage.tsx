@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { getGroupsStats, getGroupStats, setUserPoints } from '../utils/api'
 import { showToast } from '../hooks/useToast'
 import UserDetailModal from '../components/UserDetailModal'
@@ -321,85 +322,107 @@ export default function CheckinDataPage() {
             )}
 
             {/* 编辑积分模态框 */}
-            {editModalOpen && editingUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setEditModalOpen(false)}></div>
-                    <div className="relative bg-white dark:bg-[#1a1b1d] rounded-2xl p-6 w-full max-w-md shadow-xl">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">编辑用户积分</h3>
-                            <button
-                                onClick={() => setEditModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
-                            >
-                                <IconX size={20} />
-                            </button>
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    用户
-                                </label>
-                                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-gray-900 dark:text-white">
-                                    {editingUser.nickname} ({editingUser.userId})
+            {editModalOpen && editingUser && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999]"
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                >
+                    {/* 背景遮罩 */}
+                    <div 
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+                        onClick={() => setEditModalOpen(false)}
+                    />
+                    
+                    {/* 内容容器 - 垂直水平居中 */}
+                    <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+                        <div 
+                            className="bg-white dark:bg-[#1a1b1d] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden pointer-events-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* 头部 */}
+                            <div className="bg-gradient-to-r from-brand-500 to-brand-600 p-6 relative">
+                                <button
+                                    onClick={() => setEditModalOpen(false)}
+                                    className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-all"
+                                    aria-label="关闭"
+                                >
+                                    <IconX size={16} />
+                                </button>
+                                <h3 className="text-lg font-bold text-white pr-8">编辑用户积分</h3>
+                            </div>
+
+                            {/* 内容区域 */}
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        用户
+                                    </label>
+                                    <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-gray-900 dark:text-white">
+                                        {editingUser.nickname} ({editingUser.userId})
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        群内积分 (totalExp)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={editTotalExp}
+                                        onChange={(e) => setEditTotalExp(e.target.value)}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                        placeholder="留空表示不修改"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">用于排名和等级计算，留空则不修改</p>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        可用余额 (balance)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={editBalance}
+                                        onChange={(e) => setEditBalance(e.target.value)}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                        placeholder="留空表示不修改"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">可用于消费和兑换，留空则不修改</p>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        操作说明
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                        placeholder="可选，用于记录本次操作原因"
+                                    />
+                                </div>
+                                
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button
+                                        onClick={() => setEditModalOpen(false)}
+                                        className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors"
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        disabled={editLoading}
+                                        className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                                    >
+                                        {editLoading ? '保存中...' : '保存'}
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    群内积分
-                                </label>
-                                <input
-                                    type="number"
-                                    value={editTotalExp}
-                                    onChange={(e) => setEditTotalExp(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    可用余额
-                                </label>
-                                <input
-                                    type="number"
-                                    value={editBalance}
-                                    onChange={(e) => setEditBalance(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    操作说明
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editDescription}
-                                    onChange={(e) => setEditDescription(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                                    placeholder="可选，用于记录本次操作原因"
-                                />
-                            </div>
-                        </div>
-                        
-                        <div className="flex justify-end gap-3 mt-6">
-                            <button
-                                onClick={() => setEditModalOpen(false)}
-                                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors"
-                            >
-                                取消
-                            </button>
-                            <button
-                                onClick={handleSaveEdit}
-                                disabled={editLoading}
-                                className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-                            >
-                                {editLoading ? '保存中...' : '保存'}
-                            </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )
