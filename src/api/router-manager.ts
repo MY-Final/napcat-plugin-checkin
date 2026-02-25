@@ -1,34 +1,68 @@
 import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types'
-import { registerStatusRoutes } from '../services/api/status-routes'
-import { registerConfigRoutes } from '../services/api/config-routes'
-import { registerGroupRoutes } from '../services/api/group-routes'
-import { registerUserRoutes } from '../services/api/user-routes'
-import { registerStatsRoutes } from '../services/api/stats-routes'
-import { registerRankingRoutes } from '../services/api/ranking-routes'
-import { registerGroupCheckinRoutes } from '../services/api/group-checkin-routes'
-import { registerPointsRoutes } from '../services/api/points-routes'
-import { registerLeaderboardRoutes } from '../services/api/leaderboard-routes'
-import { registerTemplateRoutes } from '../services/api/template-routes'
-import { registerTemplateManageRoutes } from '../services/api/template-manage-routes'
-import { registerV1Routes } from '../services/api/v1-routes'
-import { registerLogRoutes } from '../services/api/log-routes'
 
+// 从分组模块导入
+import {
+    registerStatusRoutes,
+    registerConfigRoutes,
+} from './routes/core'
+
+import {
+    registerGroupRoutes,
+    registerGroupCheckinRoutes,
+} from './routes/group'
+
+import {
+    registerUserRoutes,
+} from './routes/user'
+
+import {
+    registerStatsRoutes,
+    registerRankingRoutes,
+    registerLeaderboardRoutes,
+    registerPointsRoutes,
+} from './routes/data'
+
+import {
+    registerTemplateRoutes,
+    registerTemplateManageRoutes,
+} from './routes/template'
+
+import {
+    registerV1Routes,
+    registerLogRoutes,
+} from './routes'
+
+/**
+ * 路由管理器 - 统一注册所有 API 路由
+ * 按功能模块分组，便于维护和扩展
+ */
 export function buildRouterBundle(ctx: NapCatPluginContext) {
-  return {
-    registerAll() {
-      registerStatusRoutes(ctx)
-      registerConfigRoutes(ctx)
-      registerGroupRoutes(ctx)
-      registerUserRoutes(ctx)
-      registerStatsRoutes(ctx)
-      registerRankingRoutes(ctx)
-      registerGroupCheckinRoutes(ctx)
-      registerPointsRoutes(ctx)
-      registerLeaderboardRoutes(ctx)
-      registerTemplateRoutes(ctx)
-      registerTemplateManageRoutes(ctx)
-      registerV1Routes(ctx)
-      registerLogRoutes(ctx)
+    return {
+        registerAll() {
+            // 核心路由
+            registerStatusRoutes(ctx)
+            registerConfigRoutes(ctx)
+
+            // 群组路由
+            registerGroupRoutes(ctx)
+            registerGroupCheckinRoutes(ctx)
+
+            // 用户路由
+            registerUserRoutes(ctx)
+
+            // 数据路由
+            registerStatsRoutes(ctx)
+            registerRankingRoutes(ctx)
+            registerLeaderboardRoutes(ctx)
+            registerPointsRoutes(ctx)
+
+            // 模板路由
+            registerTemplateRoutes(ctx)
+            registerTemplateManageRoutes(ctx)
+
+            // 其他路由
+            registerV1Routes(ctx)
+            registerLogRoutes(ctx)
+        }
     }
-  }
 }
