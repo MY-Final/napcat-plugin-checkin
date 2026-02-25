@@ -6,6 +6,7 @@
 import type { LeaderboardData, LeaderboardUser, LeaderboardType } from '../types';
 import { pluginState } from '../core/state';
 import { getGroupAllUsersData } from './checkin-service';
+import { getTemplateForSend, initDefaultTemplates } from './template-service';
 
 /**
  * 获取排行榜数据
@@ -318,13 +319,16 @@ function generateMyRankHtml(myRank: LeaderboardUser): string {
  * 生成排行榜 HTML
  */
 export function generateLeaderboardHTML(data: LeaderboardData): string {
-    // 检查是否有自定义模板
-    const customTemplate = pluginState.config.customLeaderboardTemplate;
-    if (customTemplate) {
-        return generateLeaderboardHTMLWithTemplate(data, customTemplate);
+    // 从模板服务获取模板
+    initDefaultTemplates();
+    const template = getTemplateForSend('leaderboard');
+    
+    if (template) {
+        pluginState.logger.debug(`使用排行榜模板: ${template.name} (${template.id})`);
+        return generateLeaderboardHTMLWithTemplate(data, template.html);
     }
     
-    // 使用默认模板
+    // 使用内置默认模板
     const maxPoints = data.users.length > 0 ? data.users[0].periodPoints : 1;
     const usersHtml = generateUsersHtml(data.users, maxPoints);
     const myStatusHtml = data.myRank ? generateMyRankHtml(data.myRank) : '';
